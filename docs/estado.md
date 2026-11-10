@@ -27,4 +27,4 @@ Fuente de verdad: lo que NO está en «Probado» no debe presentarse como hecho.
 - Plantilla: solo 5 filas de educación superior y 2 de idiomas (se advierte; el excedente no se imprime).
 - No hay recuperación de contraseña, verificación de correo, ni limitación de tasa global por IP.
 - No se valida la autenticidad de certificados (fuera de alcance, declarado en la UI).
-- La evidencia del harness quedó vinculada a un hash de commit solo si el proyecto se versiona con git (aquí no había repositorio: `sin-git`).
+- Solo la tarea T-001 se recorrió por el harness (start/check, evidencia en `harness/evidence/` ligada al commit local); revisión y aceptación (`review`/`close`) y el resto de tareas las debe ejecutar la persona responsable. El repositorio git es local; no se publicó en GitHub.

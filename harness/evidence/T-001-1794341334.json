@@ -1,0 +1,13 @@
+{
+  "task": "T-001",
+  "head": "6dd0fa61281e6eae24788627ac8e2dceb42d7110",
+  "dirty": false,
+  "at": "2026-11-10T15:08:54",
+  "results": {
+    "validate": {
+      "ok": true,
+      "tail": "validate ok"
+    }
+  },
+  "ok": true
+}
