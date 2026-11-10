@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "roles": {"direccion": "persona responsable (acepta)", "analisis": "IA", "arquitectura": "IA", "desarrollo": "IA", "revision": "IA distinta a desarrollo"},
+  "tasks": [
+    {"id": "T-001", "title": "Documentación y diagramas", "feature": [], "depends_on": [], "role": "arquitectura", "allowed_paths": ["docs/", "AGENTS.md", "README.md"],
+     "acceptance": ["docs/estado.md separa probado / implementado sin probar en vivo / pendiente", "ADR 01-05 presentes", "validate: endpoints documentados == endpoints implementados"], "checks": ["validate"]},
+    {"id": "T-002", "title": "Modelo de datos y harness", "feature": ["RF09"], "depends_on": ["T-001"], "role": "arquitectura", "allowed_paths": ["backend/app/core/", "harness/", "scripts/"],
+     "acceptance": ["validadores $jsonSchema activos", "índices únicos (fuente,id oficial), (usuario,idempotency_key)", "harness valida catálogo"], "checks": ["validate", "pytest:backend/tests/test_lake.py"]},
+    {"id": "T-003", "title": "Identidad, hoja de vida y concurrencia", "feature": ["RF01", "RF02", "RF03", "RF04", "RF09"], "depends_on": ["T-002"], "role": "desarrollo", "allowed_paths": ["backend/app/modules/identity/", "backend/app/modules/resume/", "backend/tests/"],
+     "acceptance": ["persistencia entre sesiones", "aislamiento entre usuarios (404)", "409 por revisión obsoleta", "cliente no puede declararse verificado"], "checks": ["pytest:backend/tests/test_identity.py", "pytest:backend/tests/test_resume.py", "pytest:backend/tests/test_timecalc.py"]},
+    {"id": "T-004", "title": "Verificación de entidades", "feature": ["RF05"], "depends_on": ["T-003"], "role": "desarrollo", "allowed_paths": ["backend/app/modules/organizations/", "backend/tests/"],
+     "acceptance": ["verificación solo por identificador oficial exacto", "error/ambiguo/no encontrado no concede verificación", "RUES/SIGEP deshabilitados por defecto", "host fuera de lista blanca bloqueado"], "checks": ["pytest:backend/tests/test_organizations.py"]},
+    {"id": "T-005", "title": "Soportes (certificados) y recuperación", "feature": ["RF06", "RF09"], "depends_on": ["T-004"], "role": "desarrollo", "allowed_paths": ["backend/app/modules/documents/", "backend/app/core/storage.py", "backend/tests/"],
+     "acceptance": ["DOC-01 no cargar sin entidad verificada", "DOC-02 recuperación en otra sesión sin recargar", "DOC-03 fallo de almacenamiento no deja ready", "DOC-04 idempotencia", "DOC-05 aislamiento", "DOC-06 borrado coordinado", "DOC-07 retención temporales"], "checks": ["pytest:backend/tests/test_documents.py"]},
+    {"id": "T-006", "title": "Data lake Bronze/Silver/Gold", "feature": ["RF08"], "depends_on": ["T-005"], "role": "desarrollo", "allowed_paths": ["backend/app/modules/lake/", "backend/tests/"],
+     "acceptance": ["catálogo y linaje", "Silver sin PII directa", "Gold sin PII con k>=5"], "checks": ["pytest:backend/tests/test_lake.py"]},
+    {"id": "T-007", "title": "Exportación PDF", "feature": ["RF07"], "depends_on": ["T-003"], "role": "desarrollo", "allowed_paths": ["backend/app/modules/export/", "backend/tests/"],
+     "acceptance": ["3 páginas, plantilla intacta", "firma y RR.HH. en blanco", "advertencias por límites de la plantilla"], "checks": ["pytest:backend/tests/test_export.py"]},
+    {"id": "T-008", "title": "Frontend React + Vite", "feature": ["RF01", "RF02", "RF03", "RF04", "RF05", "RF06", "RF07"], "depends_on": ["T-005", "T-007"], "role": "desarrollo", "allowed_paths": ["frontend/", "tests_e2e/"],
+     "acceptance": ["npm test", "npm run build", "E2E en navegador"], "checks": ["npm:test", "npm:build"]},
+    {"id": "T-009", "title": "Despliegue (Docker, CI, guía)", "feature": [], "depends_on": ["T-008"], "role": "arquitectura", "allowed_paths": ["docker-compose.yml", "backend/Dockerfile", ".github/", "docs/despliegue.md"],
+     "acceptance": ["docker compose config válido", "workflows presentes", "pendientes de prueba en vivo declarados en docs/estado.md"], "checks": ["validate"]}
+  ]
+}

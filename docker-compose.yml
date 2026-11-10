@@ -1,0 +1,31 @@
+# Desarrollo local completo: MongoDB + API + frontend. Solo datos sintéticos.
+services:
+  mongo:
+    image: mongo:7
+    volumes: [mongo_data:/data/db]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      retries: 6
+  api:
+    build: ./backend
+    environment:
+      MONGO_URI: mongodb://mongo:27017
+      MONGO_DB: hoja_de_vida
+      CORS_ORIGINS: http://localhost:5173,http://localhost:8080
+      STORAGE_BACKEND: local
+      LOCAL_STORAGE_DIR: /data/storage
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+    volumes: [storage:/data/storage]
+    ports: ["8000:8000"]
+    depends_on:
+      mongo: {condition: service_healthy}
+  web:
+    build:
+      context: ./frontend
+      args: {VITE_API_URL: "http://localhost:8000"}
+    ports: ["8080:80"]
+    depends_on: [api]
+volumes:
+  mongo_data:
+  storage:

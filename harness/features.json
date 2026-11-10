@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "features": [
+    {"id": "RF01", "name": "Registro e inicio de sesión", "doc": "docs/requisitos.md#requisitos-funcionales", "endpoints": ["POST /api/auth/register", "POST /api/auth/login", "POST /api/auth/logout", "GET /api/auth/me"], "tests": ["backend/tests/test_identity.py"]},
+    {"id": "RF02", "name": "Datos personales persistentes", "endpoints": ["GET /api/resume", "PUT /api/resume"], "tests": ["backend/tests/test_resume.py"]},
+    {"id": "RF03", "name": "Formación académica e idiomas", "endpoints": ["GET /api/education", "POST /api/education", "PUT /api/education/{rid}", "DELETE /api/education/{rid}"], "tests": ["backend/tests/test_resume.py"]},
+    {"id": "RF04", "name": "Experiencia laboral y tiempo total", "endpoints": ["GET /api/work", "POST /api/work", "PUT /api/work/{rid}", "DELETE /api/work/{rid}", "GET /api/resume/experience-summary"], "tests": ["backend/tests/test_resume.py", "backend/tests/test_timecalc.py"]},
+    {"id": "RF05", "name": "Verificación de entidades por identificador oficial", "endpoints": ["POST /api/organizations/search", "POST /api/organizations/verify", "GET /api/organizations/{org_id}"], "tests": ["backend/tests/test_organizations.py"]},
+    {"id": "RF06", "name": "Soportes PDF/JPG/PNG ≤ 5 MB recuperables", "endpoints": ["POST /api/documents", "GET /api/documents", "GET /api/documents/{doc_id}/download", "DELETE /api/documents/{doc_id}"], "tests": ["backend/tests/test_documents.py", "tests_e2e/e2e.py"]},
+    {"id": "RF07", "name": "Exportación PDF sobre plantilla oficial", "endpoints": ["GET /api/export/pdf", "GET /api/export/preview"], "tests": ["backend/tests/test_export.py"]},
+    {"id": "RF08", "name": "Data lake Bronze/Silver/Gold", "endpoints": ["GET /api/lake/catalog", "GET /api/lake/lineage/{object_id}", "POST /api/lake/refresh-silver", "GET /api/lake/gold", "POST /api/lake/build-gold"], "tests": ["backend/tests/test_lake.py"]},
+    {"id": "RF09", "name": "Concurrencia por revisión y borrado coordinado", "endpoints": [], "tests": ["backend/tests/test_resume.py", "backend/tests/test_documents.py"]}
+  ],
+  "extra_endpoints": ["GET /api/health"]
+}
