@@ -221,7 +221,7 @@ def test_retencion_limpia_temporales(client, alice):
 
 
 def test_soporte_de_educacion_basica_con_due(client, alice):
-    mock_source("due", [{"codigo_dane": "111001000001", "nombre_establecimiento": "COLEGIO SINTETICO", "nombre_municipio": "BOGOTA", "nombre_departamento": "BOGOTA D.C.", "estado": "Activo"}])
+    mock_source("due", [{"a_o": "2025", "codigo_dane": "111001000001", "nombre_establecimiento": "COLEGIO SINTETICO", "municipio": "BOGOTA", "departamento": "BOGOTA D.C."}])
     resume = client.get("/api/resume", headers=alice["headers"]).json()
     r = client.post("/api/organizations/verify", json={"source": "due", "official_id": "111001000001", "record_type": "education_basic", "record_id": resume["id"]}, headers=alice["headers"])
     assert r.json()["organization_status"] == "verified"

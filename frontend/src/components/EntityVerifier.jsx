@@ -63,7 +63,7 @@ export default function EntityVerifier({ recordType, recordId, sources, status, 
             <ul className="candidates">
               {res.candidates.map((c) => (
                 <li key={c.official_id}>
-                  <div><strong>{c.name}</strong><br /><span className="muted">{c.municipio}{c.departamento ? `, ${c.departamento}` : ""} · ID {c.official_id}{c.estado_registral ? ` · ${c.estado_registral}` : ""}</span></div>
+                  <div><strong>{c.name}</strong><br /><span className="muted">{c.municipio}{c.departamento ? `, ${c.departamento}` : ""} · ID {c.official_id}{c.extra?.nit ? ` · NIT ${c.extra.nit}` : ""}{c.estado_registral ? ` · ${c.estado_registral}` : ""}</span></div>
                   <button disabled={busy} onClick={() => verify(c.official_id)}>Verificar esta</button>
                 </li>
               ))}

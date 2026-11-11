@@ -1,26 +1,57 @@
 """Conector genérico para datasets abiertos de datos.gov.co (API SODA/Socrata).
 
-AVISO: los nombres de columna de `field_map` son SUPUESTOS no verificados contra los datasets
-reales (el entorno de desarrollo no tenía acceso a datos.gov.co). Ajustar en docs/fuentes.md.
-Las pruebas usan respuestas simuladas (httpx.MockTransport).
+Los nombres de columna se confirmaron contra los datasets reales el 2026-11-10 (ver docs/fuentes.md).
+Las pruebas automatizadas usan respuestas grabadas/simuladas (httpx.MockTransport); la comprobación
+en vivo es manual: `python scripts/check_sources.py`.
 """
 from __future__ import annotations
 import json
+import re
+import unicodedata
 from urllib.parse import urlparse
 import httpx
 from ....core.config import get_settings
 from .base import Candidate, Connector, ConnectorError
 
 
-
 def _esc(v: str) -> str:
     return v.replace("'", "''")
 
 
+def _fold(s: str) -> str:
+    s = unicodedata.normalize("NFKD", s or "")
+    return "".join(c for c in s if not unicodedata.combining(c)).upper()
+
+
+def name_pattern(q: str) -> str:
+    """Patrón LIKE tolerante a tildes: SoQL no tiene unaccent, así que cada vocal se vuelve el comodín `_`
+    (POLITECNICO encuentra POLITÉCNICO). Los comodines del usuario se neutralizan. La selección final
+    la hace la persona; la verificación sigue siendo por identificador oficial exacto."""
+    q = re.sub(r"\s+", " ", _fold(q).replace("%", " ").replace("_", " ")).strip()
+    return "%" + re.sub(r"[AEIOU]", "_", q) + "%"
+
+
+def _digits(s: str) -> str:
+    return re.sub(r"\D", "", s or "")
+
+
+class _Blank(dict):
+    def __missing__(self, k):
+        return ""
+
+
 class SocrataConnector(Connector):
-    def __init__(self, source: str, kind: str, dataset: str, field_map: dict, transport: httpx.BaseTransport | None = None):
+    """`field_map`: id, name, municipio, departamento y opcionalmente nit / estado (columnas).
+    `estado_template`: texto del estado registral a partir de la fila (p. ej. "{estado} ({fecha_actualizacion})").
+    `id_numeric`: la columna del identificador es numérica; un identificador no numérico no se consulta.
+    `snapshot`: columna de corte (p. ej. año) cuando el dataset repite la entidad por periodo: se usa el corte
+    más reciente en que aparece el identificador."""
+
+    def __init__(self, source: str, kind: str, dataset: str, field_map: dict, transport: httpx.BaseTransport | None = None,
+                 *, estado_template: str | None = None, id_numeric: bool = False, snapshot: str | None = None):
         self.source, self.kind, self.dataset, self.fm = source, kind, dataset, field_map
         self.transport = transport
+        self.estado_template, self.id_numeric, self.snapshot = estado_template, id_numeric, snapshot
 
     # --- red -----------------------------------------------------------------
     def _get(self, params: dict) -> tuple[list[dict], str]:
@@ -42,37 +73,88 @@ class SocrataConnector(Connector):
             data = r.json()
         except json.JSONDecodeError as e:
             raise ConnectorError("Respuesta no es JSON") from e
-        if not isinstance(data, list):
+        if not isinstance(data, list) or not all(isinstance(x, dict) for x in data):
             raise ConnectorError("Formato inesperado")
         return data, r.text
+
+    def _params(self, where: str, limit: int) -> dict:
+        p = {"$where": where, "$limit": str(limit)}
+        if self.snapshot:
+            p["$order"] = f"{self.snapshot} DESC"
+        return p
+
+    def _estado(self, row: dict) -> str:
+        if self.estado_template:
+            txt = self.estado_template.format_map(_Blank({k: str(v).strip() for k, v in row.items()}))
+            txt = re.sub(r"\(\s*\)", "", txt)                 # columnas vacías: sin paréntesis huérfanos
+            return re.sub(r"\s+", " ", txt).strip(" ;")
+        return str(row.get(self.fm.get("estado", ""), "")).strip()
 
     def _to_candidate(self, row: dict) -> Candidate | None:
         oid = str(row.get(self.fm["id"], "")).strip()
         name = str(row.get(self.fm["name"], "")).strip()
         if not oid or not name:
             return None
+        extra = {}
+        if self.fm.get("nit") and row.get(self.fm["nit"]):
+            extra["nit"] = str(row[self.fm["nit"]]).strip()
+        if self.snapshot and row.get(self.snapshot):
+            extra["corte"] = str(row[self.snapshot]).strip()
         return Candidate(
             source=self.source, official_id=oid, name=name,
             municipio=str(row.get(self.fm.get("municipio", ""), "")).strip(),
             departamento=str(row.get(self.fm.get("departamento", ""), "")).strip(),
-            estado_registral=str(row.get(self.fm.get("estado", ""), "")).strip(),
+            estado_registral=self._estado(row), extra=extra,
         )
+
+    def _valid_id(self, official_id: str) -> bool:
+        return bool(official_id) and (not self.id_numeric or official_id.isdigit())
+
+    def _latest(self, rows: list[dict]) -> list[dict]:
+        """Con columna de corte: conserva solo las filas del corte más reciente."""
+        if not self.snapshot or not rows:
+            return rows
+        def key(r):
+            v = str(r.get(self.snapshot, ""))
+            return int(v) if v.isdigit() else -1
+        top = max(key(r) for r in rows)
+        return [r for r in rows if key(r) == top]
 
     # --- API -----------------------------------------------------------------
     def search(self, query, municipio, official_id, limit=10):
-        where = []
-        if official_id:
-            where.append(f"{self.fm['id']}='{_esc(official_id.strip())}'")
+        where, nit = [], None
+        oid = (official_id or "").strip()
+        if oid:
+            d = _digits(oid)
+            if self.fm.get("nit") and len(d) >= 9:
+                # NIT con formatos variables en la fuente (puntos, guion, espacios): prefiltro amplio y comparación exacta aquí.
+                nit = d[:9]
+                where.append(f"{self.fm['nit']} like '%{'%'.join(nit)}%'")
+            elif self._valid_id(oid):
+                where.append(f"{self.fm['id']}='{_esc(oid)}'")
+            else:
+                return []
         if query:
-            where.append(f"upper({self.fm['name']}) like upper('%{_esc(query.strip())}%')")
+            where.append(f"upper({self.fm['name']}) like '{_esc(name_pattern(query))}'")
         if municipio and self.fm.get("municipio"):
-            where.append(f"upper({self.fm['municipio']}) like upper('%{_esc(municipio.strip())}%')")
+            where.append(f"upper({self.fm['municipio']}) like '{_esc(name_pattern(municipio))}'")
         if not where:
             return []
-        rows, _ = self._get({"$where": " AND ".join(where), "$limit": str(min(limit, 20))})
-        return [c for c in (self._to_candidate(r) for r in rows) if c]
+        rows, _ = self._get(self._params(" AND ".join(where), 50 if (self.snapshot or nit) else min(limit, 20)))
+        if nit:
+            rows = [r for r in rows if _digits(str(r.get(self.fm["nit"], "")))[:9] == nit]
+        out, seen = [], set()
+        for c in (self._to_candidate(r) for r in rows):          # con corte: filas ordenadas del más reciente
+            if c and c.official_id not in seen:
+                seen.add(c.official_id)
+                out.append(c)
+        return out[:limit]
 
     def get_by_official_id(self, official_id):
-        rows, raw = self._get({"$where": f"{self.fm['id']}='{_esc(official_id.strip())}'", "$limit": "5"})
-        cands = [c for c in (self._to_candidate(r) for r in rows) if c and c.official_id == official_id.strip()]
-        return cands, {"raw": raw}
+        oid = official_id.strip()
+        if not self._valid_id(oid):
+            return [], {"raw": "", "motivo": "identificador con formato no válido para la fuente"}
+        rows, raw = self._get(self._params(f"{self.fm['id']}='{_esc(oid)}'", 50 if self.snapshot else 5))
+        rows = self._latest([r for r in rows if str(r.get(self.fm["id"], "")).strip() == oid])
+        cands = [c for c in (self._to_candidate(r) for r in rows) if c]
+        return cands, {"raw": raw, "dataset": self.dataset}

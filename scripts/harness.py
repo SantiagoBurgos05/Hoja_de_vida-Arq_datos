@@ -24,6 +24,7 @@ CHECKS = {
     "npm:build": (["npm", "run", "build"], ROOT / "frontend"),
     "local:e2e": ([PY, "scripts/local_checks.py", "e2e"], ROOT),
     "docker:smoke": ([PY, "scripts/local_checks.py", "docker"], ROOT),
+    "live:sources": ([PY, "scripts/check_sources.py"], ROOT),   # requiere internet (datos.gov.co)
 }
 
 

@@ -2,7 +2,14 @@
 
 Fuente de verdad: lo que NO está en «Probado» no debe presentarse como hecho.
 
-## Revisión actual: paso 2 (2026-11-10, Windows, rama `paso-02-consistencia`)
+## Revisión actual: paso 3 (2026-11-10, Windows)
+
+- Fuentes educativas **consultadas en vivo** en datos.gov.co: SNIES (`n5yy-8nav`), SIET (`gpje-sixt`) y establecimientos (`cfw5-qzt5`). Las columnas supuestas de SNIES y establecimientos eran incorrectas y se corrigieron; establecimientos repite cada colegio por año y ahora se usa el año más reciente.
+- `scripts/check_sources.py` en vivo: búsqueda, verificación por identificador e identificador inexistente correctos en las tres fuentes. Recorrido por la API con SNIES real: verificación de la entidad y carga de un certificado sintético correctas.
+- Backend: **114 pruebas aprobadas**; frontend 13 y compilación; E2E 15 (fuente simulada con columnas reales).
+- Límites: SNIES con actualización 2022-07-08 y SIET con corte 11/2020; RUES/SIGEP siguen deshabilitados. Sin revisión ni aceptación humana (T-012). Detalle: [paso-03-fuentes.md](paso-03-fuentes.md).
+
+## Revisión anterior: paso 2 (2026-11-10, Windows, rama `paso-02-consistencia`)
 
 - Corregidos: pérdida de cambios al navegar antes del autoguardado, guardados concurrentes, Silver desincronizado al eliminar, umbral Gold por personas distintas, invalidación de verificación al cambiar `tipo_entidad`, idempotencia por operación completa, `/api/health` 503, Pages condicionado a `quality`, `ADMIN_TOKEN` en `render.yaml`, vigencia del harness por huella del contenido.
 - Backend: **104 pruebas aprobadas** contra MongoDB 8.2.6 real. Frontend: **13 aprobadas** y compilación correcta. E2E Chromium: **15 comprobaciones aprobadas** (fuente **simulada**). `harness.py validate`: correcto.
@@ -31,7 +38,7 @@ Detalle, límites y comandos: [paso-01-local.md](paso-01-local.md). Los resultad
 | Revisión visual del PDF generado contra la plantilla | Renderizado y comparación de las 3 páginas | Alineado |
 
 ## Implementado pero NO probado en vivo
-- **Consultas a fuentes oficiales** (SNIES `n5yy-8nav`, SIET `gpje-sixt`, establecimientos `cfw5-qzt5`): el entorno no pudo acceder a datos.gov.co. Los **nombres de columna son supuestos** (ver `docs/fuentes.md`). Probado solo con respuestas simuladas, incluida una prueba HTTP real contra un servidor simulado local.
+- ~~Consultas a fuentes oficiales~~: resuelto en el paso 3 (consultadas en vivo, columnas confirmadas). La suite automatizada sigue usando respuestas simuladas; la consulta en vivo es `scripts/check_sources.py`.
 - **Supabase Storage** (`SupabaseStorage`): escrito según la API REST documentada; sin proyecto real para probarlo.
 - **MongoDB Atlas**: no probado; la validación `$jsonSchema` en M0 no se confirmó. Se prueba con Mongo 7 local. El índice parcial con `$in` requiere Mongo ≥ 6.
 - **Render, GitHub Pages, GitHub Actions**: archivos escritos, nunca ejecutados. Docker en Render free no se verificó.

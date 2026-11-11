@@ -1,17 +1,22 @@
 from __future__ import annotations
 import httpx
 from app.modules.organizations.connectors import registry
-from app.modules.organizations.connectors.socrata import SocrataConnector
+
+# Filas SINTÉTICAS con las columnas reales del dataset SNIES n5yy-8nav (confirmadas 2026-11-10, docs/fuentes.md).
+def snies_row(code, name, municipio, departamento, nit="900.000.000-1"):
+    return {"c_digo_instituci_n": code, "nombre_instituci_n": name, "n_mero_identificaci_n": nit, "principal_seccional": "Principal",
+            "departamento_domicilio": departamento, "municipio_domicilio": municipio,
+            "estado": "Activa en la Fecha de Actualizacion", "fecha_actualizacion": "2022-07-08"}
+
 
 SNIES_ROWS = [
-    {"codigo_institucion": "1101", "nombre_institucion": "UNIVERSIDAD SINTETICA DEL NORTE", "municipio_domicilio": "BOGOTA", "departamento_domicilio": "BOGOTA D.C.", "estado_institucion": "Activa"},
-    {"codigo_institucion": "11010", "nombre_institucion": "UNIVERSIDAD SINTETICA DEL NORTE SEDE 2", "municipio_domicilio": "BOGOTA", "departamento_domicilio": "BOGOTA D.C.", "estado_institucion": "Activa"},
-    {"codigo_institucion": "2202", "nombre_institucion": "UNIVERSIDAD SINTETICA DEL NORTE", "municipio_domicilio": "MEDELLIN", "departamento_domicilio": "ANTIOQUIA", "estado_institucion": "Activa"},
+    snies_row("1101", "UNIVERSIDAD SINTETICA DEL NORTE", "BOGOTA", "BOGOTA D.C."),
+    snies_row("11010", "UNIVERSIDAD SINTETICA DEL NORTE SEDE 2", "BOGOTA", "BOGOTA D.C."),
+    snies_row("2202", "UNIVERSIDAD SINTETICA DEL NORTE", "MEDELLIN", "ANTIOQUIA"),
 ]
 
 
 def mock_source(source: str, rows=None, status=200, boom: Exception | None = None, body: str | None = None, calls: list | None = None):
-    kind, ds, fm = registry._DEFS[source]
 
     def handler(request: httpx.Request) -> httpx.Response:
         if calls is not None:
@@ -21,7 +26,7 @@ def mock_source(source: str, rows=None, status=200, boom: Exception | None = Non
         if body is not None:
             return httpx.Response(status, text=body)
         return httpx.Response(status, json=rows if rows is not None else [])
-    registry.set_connector(source, SocrataConnector(source, kind, ds, fm, transport=httpx.MockTransport(handler)))
+    registry.set_connector(source, registry.make(source, transport=httpx.MockTransport(handler)))
 
 
 def reset_connectors():

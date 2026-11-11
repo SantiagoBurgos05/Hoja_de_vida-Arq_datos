@@ -27,6 +27,10 @@
     {"id": "T-011", "title": "Paso 2: persistencia y consistencia", "feature": ["RF02", "RF04", "RF06", "RF08", "RF09"], "depends_on": ["T-010"], "role": "desarrollo",
      "allowed_paths": ["backend/app/", "backend/tests/", "frontend/src/", "frontend/tests/", "tests_e2e/", "scripts/harness.py", ".github/", "render.yaml", "docs/"],
      "acceptance": ["Cambiar de sección antes del autoguardado no pierde cambios; guardados serializados; se guarda antes de exportar y salir", "Silver sincronizado con creación, modificación y eliminación; Gold no cuenta registros eliminados", "Umbral Gold por personas distintas", "Cambiar tipo_entidad invalida la verificación; con soportes responde 409", "Idempotencia de soportes por operación completa (archivo + registro)", "/api/health devuelve 503 si MongoDB falla", "Pages publica solo si quality pasa en el mismo commit", "Vigencia del harness por commit y huella del contenido"],
-     "checks": ["validate", "pytest:backend/tests", "npm:test", "npm:build", "local:e2e"]}
+     "checks": ["validate", "pytest:backend/tests", "npm:test", "npm:build", "local:e2e"]},
+    {"id": "T-012", "title": "Paso 3: verificación educativa con fuentes reales", "feature": ["RF05"], "depends_on": ["T-011"], "role": "desarrollo",
+     "allowed_paths": ["backend/app/modules/organizations/", "backend/tests/", "frontend/src/components/EntityVerifier.jsx", "tests_e2e/", "scripts/", "docs/"],
+     "acceptance": ["Columnas de SNIES, SIET y establecimientos confirmadas contra datos.gov.co", "Búsqueda por nombre (tolerante a tildes), municipio, NIT o identificador", "Verificación solo por identificador oficial exacto; corte más reciente en datasets por año; ambigüedad sin conceder", "Comprobación en vivo reproducible con evidencia", "RUES/SIGEP siguen deshabilitados y declarados"],
+     "checks": ["validate", "pytest:backend/tests", "npm:test", "npm:build", "local:e2e", "live:sources"]}
   ]
 }

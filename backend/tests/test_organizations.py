@@ -32,7 +32,7 @@ def test_verificar_por_identificador_oficial_guarda_evidencia(client, alice):
     r = verify(client, alice, "snies", "1101", "education_higher", e["id"]).json()
     assert r["organization_status"] == "verified"
     o = r["organization"]
-    assert o["official_id"] == "1101" and o["source"] == "snies" and o["estado_registral"] == "Activa" and o["verified_at"] and o["evidence_id"]
+    assert o["official_id"] == "1101" and o["source"] == "snies" and o["estado_registral"] == "Activa en la Fecha de Actualizacion (2022-07-08)" and o["verified_at"] and o["evidence_id"]
     assert "NO acredita" in r["message"]
     rec = client.get("/api/education", headers=alice["headers"]).json()[0]
     assert rec["organization_status"] == "verified" and rec["organization_id"] == o["id"]
@@ -75,7 +75,7 @@ def test_respuestas_anomalas_no_verifican(client, alice, status, body):
 
 
 def test_ambiguo_no_concede(client, alice):
-    dup = [SNIES_ROWS[0], dict(SNIES_ROWS[0], nombre_institucion="OTRA CON EL MISMO ID")]
+    dup = [SNIES_ROWS[0], dict(SNIES_ROWS[0], nombre_instituci_n="OTRA CON EL MISMO ID")]
     mock_source("snies", dup)
     e = client.post("/api/education", json=edu_payload(), headers=alice["headers"]).json()
     r = verify(client, alice, "snies", "1101", "education_higher", e["id"]).json()
@@ -136,7 +136,7 @@ def test_consulta_soql_escapa_comillas(client, alice):
     calls = []
     mock_source("snies", [], calls=calls)
     client.post("/api/organizations/search", json={"source": "snies", "query": "x' OR '1'='1"}, headers=alice["headers"])
-    assert "x%27%27+OR" in calls[0] or "x''" in calls[0].replace("%27", "'")
+    assert "X''" in calls[0].replace("%27", "'")                 # la comilla del usuario queda escapada
 
 
 def test_busqueda_exige_criterio(client, alice):

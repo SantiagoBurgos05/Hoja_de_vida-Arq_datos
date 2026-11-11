@@ -3,15 +3,32 @@ from ....core.config import get_settings
 from .base import Connector, ConnectorDisabled
 from .socrata import SocrataConnector
 
-# field_map: SUPUESTOS NO VERIFICADOS (ver docs/fuentes.md).
+# Columnas CONFIRMADAS contra los datasets reales de datos.gov.co el 2026-11-10 (ver docs/fuentes.md).
+# (tipo, dataset, columnas, opciones del conector)
 _DEFS = {
-    "snies": ("education_higher", "n5yy-8nav", {"id": "codigo_institucion", "name": "nombre_institucion",
-              "municipio": "municipio_domicilio", "departamento": "departamento_domicilio", "estado": "estado_institucion"}),
-    "siet": ("education_trade", "gpje-sixt", {"id": "codigo_institucion", "name": "nombre_institucion",
-             "municipio": "municipio", "departamento": "departamento", "estado": "estado"}),
-    "due": ("school", "cfw5-qzt5", {"id": "codigo_dane", "name": "nombre_establecimiento",
-            "municipio": "nombre_municipio", "departamento": "nombre_departamento", "estado": "estado"}),
+    # MEN_INSTITUCIONES EDUCACIÓN SUPERIOR. Una fila por institución (principal o seccional), código único.
+    "snies": ("education_higher", "n5yy-8nav",
+              {"id": "c_digo_instituci_n", "name": "nombre_instituci_n", "municipio": "municipio_domicilio",
+               "departamento": "departamento_domicilio", "nit": "n_mero_identificaci_n"},
+              {"estado_template": "{estado} ({fecha_actualizacion})", "id_numeric": True}),
+    # MEN_INSTITUCIONES EDUCACIÓN PARA EL TRABAJO Y EL DESARROLLO HUMANO. Sin columna de estado: se informa
+    # la licencia de funcionamiento y el corte del dataset (último corte publicado: 11/2020).
+    "siet": ("education_trade", "gpje-sixt",
+             {"id": "codigo_institucion", "name": "nombre_institucion", "municipio": "municipio",
+              "departamento": "departamento", "nit": "nit"},
+             {"estado_template": "Licencia de funcionamiento {licencia}; corte {mes_corte}/{a_o_corte}", "id_numeric": True}),
+    # MEN_ESTABLECIMIENTOS_EDUCATIVOS_PREESCOLAR_BÁSICA_Y_MEDIA. Repite cada establecimiento por año (a_o):
+    # se usa el año más reciente en que aparece el código DANE. Aproximación a DUE / Buscando Colegio.
+    "due": ("school", "cfw5-qzt5",
+            {"id": "codigo_dane", "name": "nombre_establecimiento", "municipio": "municipio", "departamento": "departamento"},
+            {"estado_template": "Reportado en el directorio del MEN, año {a_o}", "id_numeric": True, "snapshot": "a_o"}),
 }
+
+
+def make(source: str, transport=None) -> SocrataConnector:
+    """Construye el conector oficial de una fuente (las pruebas inyectan `transport`)."""
+    kind, ds, fm, opts = _DEFS[source]
+    return SocrataConnector(source, kind, ds, fm, transport=transport, **opts)
 
 
 class Disabled(Connector):
@@ -42,8 +59,7 @@ def get_connector(source: str) -> Connector:
     if source in _overrides:
         return _overrides[source]
     if source in _DEFS:
-        kind, ds, fm = _DEFS[source]
-        return SocrataConnector(source, kind, ds, fm)
+        return make(source)
     s = get_settings()
     if source == "rues":
         # Sin API/dataset oficial verificado. Habilitar solo con canal autorizado y un conector propio.

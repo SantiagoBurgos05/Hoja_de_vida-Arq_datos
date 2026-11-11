@@ -10,8 +10,9 @@ from .conftest import PDF
 from .helpers import SNIES_ROWS, edu_payload, mock_source, reset_connectors, verified_education, work_payload
 from .test_documents import up
 
-RUES_ROWS = [{"codigo_institucion": "900000001", "nombre_institucion": "EMPRESA SINTETICA SAS", "municipio_domicilio": "BOGOTA",
-              "departamento_domicilio": "BOGOTA D.C.", "estado_institucion": "ACTIVA"}]
+RUES_ROWS = [{"nit": "900000001", "razon_social": "EMPRESA SINTETICA SAS", "municipio": "BOGOTA", "departamento": "BOGOTA D.C.",
+              "estado": "ACTIVA"}]
+RUES_FIELDS = {"id": "nit", "name": "razon_social", "municipio": "municipio", "departamento": "departamento", "estado": "estado"}
 
 
 @pytest.fixture(autouse=True)
@@ -27,9 +28,8 @@ def _uid(u):
 
 def _mock_rues():
     """RUES está deshabilitado en producción; en pruebas se inyecta un conector simulado para ejercer el flujo."""
-    _, ds, fm = registry._DEFS["snies"]
     tr = httpx.MockTransport(lambda req: httpx.Response(200, json=RUES_ROWS))
-    registry.set_connector("rues", SocrataConnector("rues", "company", ds, fm, transport=tr))
+    registry.set_connector("rues", SocrataConnector("rues", "company", "rues-simulado", RUES_FIELDS, transport=tr))
 
 
 def _verified_work(client, u):
