@@ -8,3 +8,5 @@ harness/state.json
 .venv/
 .pytest_cache/
 .local-checks/
+# Documento de arquitectura de trabajo (PDF del responsable): no se publica en el repositorio público
+docs/Documentacion/

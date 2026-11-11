@@ -6,7 +6,8 @@ Fuente de verdad: lo que NO está en «Probado» no debe presentarse como hecho.
 
 - **RUES** con el dataset oficial de Confecámaras `c82u-588k` (sincronizado con el RUES) y **SIGEP** con el «Universo de entidades» de Función Pública `h7zv-k39x`. Consultados **en vivo**: Bancolombia por NIT y nombre, MinEducación por código SIGEP `0011`, NIT compartido del Distrito. Se excluyen personas naturales y datos de representantes; NIT de relleno no se consulta; varias matrículas activas = ambiguo.
 - Backend **142 pruebas aprobadas** (incluye 9 nuevas de RUES/SIGEP); frontend 13 y compilación; E2E 15, ahora con **empresa verificada por NIT y certificado laboral adjunto** (fuente simulada). `check_sources.py` en vivo: las 5 fuentes correctas.
-- Pendiente: desplegar (commit + push) y probarlo en la URL pública. Sin revisión ni aceptación humana (T-014).
+- **Desplegado** (`93b5e30` en Render y Pages; `check_deploy.py` correcto) y **probado en la URL pública por la persona responsable**: Fiduciaria Bogotá S.A. (NIT 800142383, matrícula CANCELADA según la fuente) buscada por NIT con dígito de verificación y **verificada**, con carga de certificado laboral habilitada (2026-11-11).
+- La persona responsable informó que el recorrido completo de la app funciona en la URL pública (registro, datos, verificación, soportes, exportación). Sin revisión ni aceptación formal en el harness (T-010 a T-014).
 
 ## Revisión anterior: paso 5 — infraestructura (2026-11-11)
 
@@ -67,6 +68,11 @@ Detalle, límites y comandos: [paso-01-local.md](paso-01-local.md). Los resultad
 - **Render, GitHub Pages, GitHub Actions**: archivos escritos, nunca ejecutados. Docker en Render free no se verificó.
 - **Imágenes Docker / `docker compose up`**: no se construyeron (sin demonio Docker); solo se validó la sintaxis.
 - Pruebas visuales de la UI en móvil y accesibilidad con lector de pantalla: no realizadas.
+
+## Fuera de alcance (decisión de la dirección, 2026-11-11)
+Proyecto con fines **educativos**: probar y demostrar las tecnologías implementadas, no operar un servicio abierto al público. Por decisión de la persona responsable **no se implementan**:
+- Recuperación de contraseña y verificación de correo (requerirían un servicio de correo). Usar solo cuentas y datos sintéticos.
+- Impresión del excedente de la plantilla (más de 5 estudios superiores o 2 idiomas): se mantiene la advertencia en la exportación.
 
 ## Pendiente / limitaciones declaradas
 - **RUES y SIGEP**: habilitados con datos abiertos oficiales (Confecámaras y Función Pública). No cubren personas naturales comerciantes, matrículas antiguas sin NIT ni entidades públicas liquidadas (ver `docs/fuentes.md`).
