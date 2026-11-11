@@ -16,5 +16,6 @@ services:
       - {key: SUPABASE_SERVICE_KEY, sync: false}
       - {key: SUPABASE_BUCKET, value: certificados}
       - {key: TRUST_PROXY, value: "true"}        # IP real del cliente desde X-Forwarded-For (límites de uso)
+      - {key: TRUSTED_PROXY_HOPS, value: "1"}     # se toma el valor que agrega el proxy de Render (el de la derecha)
       - {key: USER_STORAGE_QUOTA_MB, value: "25"}
       - {key: ADMIN_TOKEN, generateValue: true}   # build-gold y /api/admin/maintenance (vacío = desactivado)

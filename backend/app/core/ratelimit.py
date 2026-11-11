@@ -11,12 +11,20 @@ from .db import get_db
 
 
 def client_ip(request: Request) -> str:
-    """IP del cliente. Detrás de un proxy de confianza (Render) se usa el primer salto de X-Forwarded-For."""
-    if get_settings().trust_proxy:
-        fwd = request.headers.get("x-forwarded-for", "")
-        if fwd.strip():
-            return fwd.split(",")[0].strip()
-    return request.client.host if request.client else "?"
+    """IP del cliente para límites de uso y bloqueo de login.
+
+    Sin proxy de confianza se usa la IP de la conexión. Con `TRUST_PROXY=true` (Render) se usa X-Forwarded-For
+    contando desde la DERECHA: cada proxy agrega la IP que lo contactó al final, mientras que los valores de la
+    izquierda los escribe el propio cliente y son falsificables. `TRUSTED_PROXY_HOPS` es cuántos proxies de
+    confianza agregan valores (1 = el último valor es la IP real que vio el proxy de Render)."""
+    s = get_settings()
+    peer = request.client.host if request.client else "?"
+    if not s.trust_proxy:
+        return peer
+    hops = [h.strip() for h in request.headers.get("x-forwarded-for", "").split(",") if h.strip()]
+    if not hops:
+        return peer
+    return hops[-min(max(s.trusted_proxy_hops, 1), len(hops))]
 
 
 def enforce(bucket: str, subject: str, limit: tuple) -> None:

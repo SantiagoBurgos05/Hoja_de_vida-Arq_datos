@@ -1,0 +1,34 @@
+{
+  "task": "T-010",
+  "head": "419262430d72af4f6477046ae944dc2c1f42fcaa",
+  "tree": "5fafe7f38e1182e93045f40523e5bbb63a037dc390d74a9779e20171c3af92da",
+  "dirty": false,
+  "at": "2026-11-11T01:43:08",
+  "results": {
+    "validate": {
+      "ok": true,
+      "tail": "validate ok"
+    },
+    "pytest:backend/tests": {
+      "ok": true,
+      "tail": "C:\\Users\\pc\\Documents\\UNIMINUTO\\ARQUITECTURA DE DATOS\\Hoja_de_Vida_Digital\\hoja-de-vida-digital\\.venv\\Lib\\site-packages\\fastapi\\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n"
+    },
+    "npm:test": {
+      "ok": true,
+      "tail": "\n> hoja-de-vida-digital-frontend@0.1.0 test\n> vitest run\n\n\n RUN  v5.1.0 C:/Users/pc/Documents/UNIMINUTO/ARQUITECTURA DE DATOS/Hoja_de_Vida_Digital/hoja-de-vida-digital/frontend\n\n\n Test Files  3 passed (3)\n      Tests  13 passed (13)\n   Start at  01:42:00\n   Duration  431ms (import 31%, tests 30%, transform 25%, worker 14%)\n\n"
+    },
+    "npm:build": {
+      "ok": true,
+      "tail": "ntend@0.1.0 build\n> vite build\n\n\u001b[36mvite v8.3.7 \u001b[32mbuilding client environment for production...\u001b[36m\u001b[39m\ntransforming...\n✓ 29 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                   0.45 kB │ gzip:  0.28 kB\ndist/assets/index-CR_r9EfT.css    3.65 kB │ gzip:  1.30 kB\ndist/assets/index-DhGhGKVA.js   250.52 kB │ gzip: 78.29 kB\n\n\u001b[32m✓ built in 371ms\u001b[39m\n"
+    },
+    "local:e2e": {
+      "ok": true,
+      "tail": "es de consola/JS en el navegador\n\n15 comprobaciones E2E correctas\nE2E local completo; fuente SIMULADA. Servicios y base de prueba limpiados.\n\u001b[33m\n\u001b[1m(!)\u001b[22m outDir \u001b[37m\u001b[2mC:\\Users\\pc\\AppData\\Local\\Temp\\claude\\7cbdf58a28eee6fd\\9009b9b8-70a4-4aef-81a0-c97271e1ace7\\scratchpad\\e2e\\frontend-b8cwscc2\u001b[22m\u001b[33m is not inside project root and will not be emptied.\nUse --emptyOutDir to override.\n\u001b[39m\n"
+    },
+    "docker:smoke": {
+      "ok": true,
+      "tail": "go-1 Stopped \n Container hvcheck-d70f6a788a5e-mongo-1 Removing \n Container hvcheck-d70f6a788a5e-mongo-1 Removed \n Network hvcheck-d70f6a788a5e_default Removing \n Volume hvcheck-d70f6a788a5e_storage Removing \n Volume hvcheck-d70f6a788a5e_mongo_data Removing \n Volume hvcheck-d70f6a788a5e_storage Removed \n Volume hvcheck-d70f6a788a5e_mongo_data Removed \n Network hvcheck-d70f6a788a5e_default Removed \n"
+    }
+  },
+  "ok": true
+}

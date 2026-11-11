@@ -180,3 +180,16 @@ def test_health_devuelve_503_si_mongo_falla(client, monkeypatch):
     monkeypatch.setattr(main, "get_db", lambda: Caida())
     r = client.get("/api/health")
     assert r.status_code == 503 and r.json()["db"] == "error"
+
+
+
+def test_fallo_de_silver_no_rompe_el_guardado(client, alice, monkeypatch):
+    """Silver es derivado: si falla, el registro se guarda igual (sin 500) y queda un evento para conciliar."""
+    from app.modules.lake import service as lake
+
+    def boom(*a, **k):
+        raise RuntimeError("silver caido")
+    monkeypatch.setattr(lake, "_silver_sync_record", boom)
+    r = client.post("/api/education", json=edu_payload(), headers=alice["headers"])
+    assert r.status_code == 201
+    assert get_db().audit_events.find_one({"event": "silver_sync_fallida", "data.record_id": r.json()["id"]})

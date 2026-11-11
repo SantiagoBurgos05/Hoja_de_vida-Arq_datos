@@ -93,7 +93,17 @@ def _silver_data(db, owner_id, kind: str, rec: dict) -> tuple[dict, list]:
 
 def silver_sync_record(owner_id, record_type: str, record_id) -> None:
     """Sincroniza Silver con UN registro operacional: lo actualiza si existe y lo retira si ya no existe.
-    Se invoca en cada creación, modificación, cambio de estado y eliminación del registro."""
+    Se invoca en cada creación, modificación, cambio de estado y eliminación del registro.
+    Silver es una capa derivada: si la sincronización falla, NO se propaga el error (el dato operacional ya quedó
+    guardado) y se registra para que el mantenimiento (`reconcile_silver`) lo concilie."""
+    try:
+        _silver_sync_record(owner_id, record_type, record_id)
+    except Exception as e:
+        get_db().audit_events.insert_one({"event": "silver_sync_fallida", "at": _now(),
+                                          "data": {"record_type": record_type, "record_id": str(record_id), "error": type(e).__name__}})
+
+
+def _silver_sync_record(owner_id, record_type: str, record_id) -> None:
     kind = SILVER_KIND.get(record_type)
     if kind is None:
         return

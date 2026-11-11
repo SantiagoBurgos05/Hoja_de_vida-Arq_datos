@@ -21,7 +21,7 @@ Cada paso se ejecuta aunque otro falle. La respuesta es 200 si todos terminaron 
 ## Protección de recursos
 
 - **Cuota:** `USER_STORAGE_QUOTA_MB` (25 MB por defecto) por usuario, contando soportes `uploading`, `ready` y `delete_pending`. Excederla responde 413 `cuota_excedida`; un duplicado o una repetición idempotente no cuentan. `GET /api/documents/usage` alimenta el texto «espacio usado X de Y» en la interfaz.
-- **Límites de uso** (`core/ratelimit.py`, colección `rate_events` con TTL de 24 h): registro 10/h por IP, búsquedas + verificaciones de entidades 60 cada 10 min por usuario, cargas 30/h por usuario. Respuesta 429 `limite_de_uso`. Con `TRUST_PROXY=true` (Render) la IP sale del primer valor de `X-Forwarded-For`; sin ella esa cabecera se ignora para que no se pueda falsificar.
+- **Límites de uso** (`core/ratelimit.py`, colección `rate_events` con TTL de 24 h): registro 10/h por IP, búsquedas + verificaciones de entidades 60 cada 10 min por usuario, cargas 30/h por usuario. Respuesta 429 `limite_de_uso`. Con `TRUST_PROXY=true` (Render) la IP sale del valor de `X-Forwarded-For` que agrega el proxy de confianza (el de la derecha; `TRUSTED_PROXY_HOPS`); sin ella la cabecera se ignora. *Corrección tras la revisión independiente (2026-11-11): la versión inicial tomaba el primer valor, que el cliente puede falsificar.*
 - El login reutiliza la misma función de IP.
 
 ## Resultados

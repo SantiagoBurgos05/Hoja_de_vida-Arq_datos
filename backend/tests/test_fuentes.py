@@ -179,7 +179,13 @@ def test_rues_busqueda_por_nit_con_digito_de_verificacion(client, alice):
     mock_source("rues", [rues_row("900000001", "EMPRESA SINTETICA SAS")], calls=calls)
     r = client.post("/api/organizations/search", json={"source": "rues", "official_id": "900.000.001-7"}, headers=alice["headers"]).json()
     assert [c["official_id"] for c in r["candidates"]] == ["900000001"]
-    assert "nit in ('900000001', '9000000017')" in _where(calls[0])
+    assert "nit in ('9000000017', '900000001')" in _where(calls[0])
+
+
+def test_rues_busqueda_nit_de_8_digitos_con_dv(client, alice):
+    mock_source("rues", [rues_row("80014238", "EMPRESA SINTETICA OCHO")])
+    r = client.post("/api/organizations/search", json={"source": "rues", "official_id": "80.014.238-5"}, headers=alice["headers"]).json()
+    assert [c["official_id"] for c in r["candidates"]] == ["80014238"]
 
 
 def test_rues_prefiere_la_unica_matricula_activa(client, alice):

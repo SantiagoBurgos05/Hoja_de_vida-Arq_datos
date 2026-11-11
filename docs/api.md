@@ -8,7 +8,7 @@ Notas de comportamiento:
 - Crear, modificar, verificar, adjuntar/eliminar soportes y eliminar registros sincroniza Silver en el mismo momento. `POST /api/lake/refresh-silver` reconstruye y retira copias huérfanas (`removed`).
 - `POST /api/admin/maintenance` y `GET /api/admin/maintenance` exigen `X-Admin-Token` (= `ADMIN_TOKEN`; vacío ⇒ 403). El POST expira cargas interrumpidas, completa borrados pendientes, aplica la retención, concilia Silver y reconstruye Gold; responde 500 si algún paso falló (los demás se ejecutan igual) y deja registro en `maintenance_runs`. Misma operación por consola: `cd backend && python -m app.maintenance`.
 - Cuota: `POST /api/documents` responde 413 `cuota_excedida` si el usuario superaría `USER_STORAGE_QUOTA_MB` (25 MB por defecto). `GET /api/documents/usage` informa `used_bytes`, `quota_bytes` y `available_bytes`.
-- Límites de uso (429 `limite_de_uso`): registro 10/h por IP; búsquedas + verificaciones de entidades 60 cada 10 min por usuario; cargas 30/h por usuario. Con `TRUST_PROXY=true` la IP se toma de `X-Forwarded-For`.
+- Límites de uso (429 `limite_de_uso`): registro 10/h por IP; búsquedas + verificaciones de entidades 60 cada 10 min por usuario; cargas 30/h por usuario. Con `TRUST_PROXY=true` la IP sale de `X-Forwarded-For` contada desde la **derecha** (`TRUSTED_PROXY_HOPS`, 1 por defecto): los valores de la izquierda los escribe el cliente y no se usan.
 - `GET /api/lake/gold`: cada celda informa `value` (registros), `personas` (personas distintas) y `k`; solo se publican celdas con `personas ≥ k`.
 
 | Método y ruta | Descripción |

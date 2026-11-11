@@ -136,7 +136,7 @@ def test_cuota_de_almacenamiento_por_usuario(client, alice, settings_patch):
 # ---------------------------------------------------------- límites de uso
 def test_limite_de_registros_por_ip(client, settings_patch):
     settings_patch(trust_proxy=True, rate_register=(2, 3600))
-    h = {"X-Forwarded-For": f"203.0.113.{uuid.uuid4().int % 250}, 10.0.0.1"}
+    h = {"X-Forwarded-For": f"10.0.0.1, 203.0.113.{uuid.uuid4().int % 250}"}      # el proxy agrega la IP real al final
     codes = [client.post("/api/auth/register", json={"email": f"r{uuid.uuid4().hex[:8]}@example.com", "password": "clave-sintetica-123"},
                          headers=h).status_code for _ in range(3)]
     assert codes == [201, 201, 429]
@@ -153,6 +153,30 @@ def test_sin_proxy_de_confianza_se_ignora_x_forwarded_for(client, settings_patch
     assert client_ip(req) == "10.9.9.9"
     settings_patch(trust_proxy=True)
     assert client_ip(req) == "1.2.3.4"
+
+
+def test_x_forwarded_for_falsificado_no_evade_limites(client, settings_patch):
+    """El cliente puede escribir valores a la IZQUIERDA de X-Forwarded-For; el proxy agrega la IP real al final.
+    Cambiar el valor falsificado no debe dar una IP nueva (antes evadía el límite de registro y el bloqueo de login)."""
+    from starlette.requests import Request
+    from app.core.ratelimit import client_ip
+    settings_patch(trust_proxy=True, trusted_proxy_hops=1)
+    real = "198.51.100.23"
+    ips = {client_ip(Request({"type": "http", "headers": [(b"x-forwarded-for", f"6.6.6.{i}, {real}".encode())],
+                                "client": ("10.0.0.1", 1)})) for i in range(5)}
+    assert ips == {real}
+    settings_patch(rate_register=(2, 3600))
+    codes = [client.post("/api/auth/register", json={"email": f"f{uuid.uuid4().hex[:8]}@example.com", "password": "clave-sintetica-123"},
+                         headers={"X-Forwarded-For": f"6.6.6.{i}, 192.0.2.77"}).status_code for i in range(3)]
+    assert codes == [201, 201, 429]                                  # rotar el valor falsificado no ayuda
+
+
+def test_bloqueo_de_login_no_se_evade_con_ip_falsificada(client, alice, settings_patch):
+    settings_patch(trust_proxy=True, trusted_proxy_hops=1)
+    bad = {"email": alice["email"], "password": "clave-equivocada-000"}
+    codes = [client.post("/api/auth/login", json=bad, headers={"X-Forwarded-For": f"6.6.6.{i}, 192.0.2.88"}).status_code
+             for i in range(6)]
+    assert codes[:5] == [401] * 5 and codes[5] == 429
 
 
 def test_limite_de_consultas_a_fuentes_por_usuario(client, alice, bob, settings_patch):

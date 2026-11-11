@@ -48,6 +48,7 @@ class Settings:
     user_storage_quota_bytes: int = field(default_factory=lambda: int(float(os.getenv("USER_STORAGE_QUOTA_MB", "25")) * 1024 * 1024))
     stale_upload_minutes: int = field(default_factory=lambda: int(os.getenv("STALE_UPLOAD_MINUTES", "60")))
     trust_proxy: bool = field(default_factory=lambda: _bool("TRUST_PROXY", False))   # Render: X-Forwarded-For
+    trusted_proxy_hops: int = field(default_factory=lambda: int(os.getenv("TRUSTED_PROXY_HOPS", "1")))
     # Límites de uso: (máximo de eventos, ventana en segundos)
     rate_register: tuple = (10, 3600)      # registros por IP
     rate_lookup: tuple = (60, 600)         # búsquedas + verificaciones por usuario (consultan fuentes externas)

@@ -146,9 +146,10 @@ class SocrataConnector(Connector):
         if oid:
             d = _digits(oid)
             if self.fm.get("nit") and len(d) >= 9 and self.nit_exact:
-                # NIT solo con dígitos en la fuente: igualdad con y sin el dígito de verificación final.
-                nit = d[:9]
-                where.append(f"{self.fm['nit']} in ('{nit}', '{d}')")
+                # NIT solo con dígitos en la fuente: el valor tal cual o sin su último dígito (dígito de verificación),
+                # lo que cubre NIT de 8 o 9 dígitos escritos con DV.
+                nit = (d, d[:-1])
+                where.append(f"{self.fm['nit']} in ('{d}', '{d[:-1]}')")
             elif self.fm.get("nit") and len(d) >= 9:
                 # NIT con formatos variables en la fuente (puntos, guion, espacios): prefiltro amplio y comparación exacta aquí.
                 nit = d[:9]
@@ -164,7 +165,9 @@ class SocrataConnector(Connector):
         if not where:
             return []
         rows, _ = self._get(self._params(" AND ".join(where), 50 if (self.snapshot or nit) else min(limit, 20)))
-        if nit:
+        if isinstance(nit, tuple):
+            rows = [r for r in rows if _digits(str(r.get(self.fm["nit"], ""))) in nit]
+        elif nit:
             rows = [r for r in rows if _digits(str(r.get(self.fm["nit"], "")))[:9] == nit]
         out, seen = [], set()
         for c in (self._to_candidate(r) for r in rows):          # con corte: filas ordenadas del más reciente

@@ -2,7 +2,13 @@
 
 Fuente de verdad: lo que NO está en «Probado» no debe presentarse como hecho.
 
-## Revisión actual: RUES y SIGEP habilitados (2026-11-11)
+## Revisión actual: revisión independiente de T-010 a T-014 (2026-11-11)
+
+- Un agente revisor distinto al de desarrollo revisó el diff `03c5ff5..4192624`: **ok** en T-010, T-011, T-012 y T-014; **changes** en T-013 por un defecto de seguridad: la IP se tomaba del **primer** valor de `X-Forwarded-For`, que el cliente puede falsificar, lo que permitía evadir el límite de registro y el bloqueo de intentos de login.
+- Corregido: la IP se cuenta desde la derecha (`TRUSTED_PROXY_HOPS`), con pruebas de cabecera falsificada en registro y login. Notas menores también corregidas: búsqueda por NIT de 8 dígitos con DV; un fallo de Silver ya no convierte un guardado correcto en HTTP 500 (queda un evento `silver_sync_fallida` y el mantenimiento concilia); secciones desactualizadas de este archivo.
+- Backend **146 pruebas aprobadas**.
+
+## Revisión anterior: RUES y SIGEP habilitados (2026-11-11)
 
 - **RUES** con el dataset oficial de Confecámaras `c82u-588k` (sincronizado con el RUES) y **SIGEP** con el «Universo de entidades» de Función Pública `h7zv-k39x`. Consultados **en vivo**: Bancolombia por NIT y nombre, MinEducación por código SIGEP `0011`, NIT compartido del Distrito. Se excluyen personas naturales y datos de representantes; NIT de relleno no se consulta; varias matrículas activas = ambiguo.
 - Backend **142 pruebas aprobadas** (incluye 9 nuevas de RUES/SIGEP); frontend 13 y compilación; E2E 15, ahora con **empresa verificada por NIT y certificado laboral adjunto** (fuente simulada). `check_sources.py` en vivo: las 5 fuentes correctas.
@@ -63,10 +69,11 @@ Detalle, límites y comandos: [paso-01-local.md](paso-01-local.md). Los resultad
 
 ## Implementado pero NO probado en vivo
 - ~~Consultas a fuentes oficiales~~: resuelto en el paso 3 (consultadas en vivo, columnas confirmadas). La suite automatizada sigue usando respuestas simuladas; la consulta en vivo es `scripts/check_sources.py`.
-- **Supabase Storage**: probado en vivo desde el PC el 2026-11-11 (ver revisión actual); **no** probado todavía desde Render.
-- **MongoDB Atlas**: probado desde el PC local el 2026-11-11 (M0, MongoDB 8.0.37): `$jsonSchema`, `collMod` e índices funcionan. **No** probado todavía desde Render ni con carga real.
-- **Render, GitHub Pages, GitHub Actions**: archivos escritos, nunca ejecutados. Docker en Render free no se verificó.
-- **Imágenes Docker / `docker compose up`**: no se construyeron (sin demonio Docker); solo se validó la sintaxis.
+- **Supabase Storage**: probado desde el PC y desde Render (mantenimiento en Render y carga/descarga de certificados en la URL pública), 2026-11-11.
+- **MongoDB Atlas**: probado desde el PC y desde Render (M0, MongoDB 8.0.37), 2026-11-11. **No** probado con carga real (muchos usuarios simultáneos).
+- ~~Render, GitHub Pages, GitHub Actions~~: desplegados y ejecutados el 2026-11-11 (ver revisiones actuales).
+- ~~Imágenes Docker~~: `docker:smoke` (construcción, escritura sin root y persistencia del volumen) aprobado en `check T-010`; `docker compose up` completo no se ejecutó a mano.
+- **IP real detrás de Render**: `TRUSTED_PROXY_HOPS=1` supone que el proxy de Render agrega la IP del cliente al final de `X-Forwarded-For`; no se inspeccionó la cabecera real en producción.
 - Pruebas visuales de la UI en móvil y accesibilidad con lector de pantalla: no realizadas.
 
 ## Fuera de alcance (decisión de la dirección, 2026-11-11)
@@ -80,4 +87,4 @@ Proyecto con fines **educativos**: probar y demostrar las tecnologías implement
 - Plantilla: solo 5 filas de educación superior y 2 de idiomas (se advierte; el excedente no se imprime).
 - No hay recuperación de contraseña ni verificación de correo. Hay límites de uso en registro, consultas a fuentes y cargas (paso 4), no un límite global para todas las rutas.
 - No se valida la autenticidad de certificados (fuera de alcance, declarado en la UI).
-- La evidencia histórica corresponde a T-001. La revisión actual añade T-010 para el paso 1, sin aceptar tareas anteriores. El estado local previo del harness no estaba presente en esta copia; no se reconstruyen aceptaciones a partir de documentación histórica. La revisión final y aceptación siguen pendientes. No se ha publicado ni desplegado durante esta revisión.
+- La evidencia histórica corresponde a T-001. La revisión actual añade T-010 para el paso 1, sin aceptar tareas anteriores. El estado local previo del harness no estaba presente en esta copia; no se reconstruyen aceptaciones a partir de documentación histórica. La revisión final y aceptación siguen pendientes. (Nota posterior: la app se desplegó el 2026-11-11, ver revisiones actuales.)
