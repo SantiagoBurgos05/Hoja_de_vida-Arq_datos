@@ -8,11 +8,25 @@ def _bool(name: str, default: bool) -> bool:
     return os.getenv(name, str(default)).strip().lower() in ("1", "true", "yes", "si")
 
 
+def _origins(raw: str) -> list[str]:
+    """Orígenes CORS normalizados como los envía el navegador: esquema y host en minúsculas, sin `/` final.
+    (`https://Usuario.github.io/` -> `https://usuario.github.io`; una ruta como `/repo` se descarta.)"""
+    out = []
+    for o in raw.split(","):
+        o = o.strip()
+        if not o:
+            continue
+        scheme, sep, rest = o.partition("://")
+        host = rest.split("/", 1)[0] if sep else o
+        out.append(f"{scheme.lower()}://{host.lower()}" if sep else o.lower())
+    return out
+
+
 @dataclass
 class Settings:
     mongo_uri: str = field(default_factory=lambda: os.getenv("MONGO_URI", "mongodb://127.0.0.1:27017"))
     mongo_db: str = field(default_factory=lambda: os.getenv("MONGO_DB", "hoja_de_vida"))
-    cors_origins: list[str] = field(default_factory=lambda: [o for o in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",") if o])
+    cors_origins: list[str] = field(default_factory=lambda: _origins(os.getenv("CORS_ORIGINS", "http://localhost:5173")))
     session_ttl_hours: int = field(default_factory=lambda: int(os.getenv("SESSION_TTL_HOURS", "168")))
     max_upload_bytes: int = 5 * 1024 * 1024
     login_max_attempts: int = field(default_factory=lambda: int(os.getenv("LOGIN_MAX_ATTEMPTS", "5")))

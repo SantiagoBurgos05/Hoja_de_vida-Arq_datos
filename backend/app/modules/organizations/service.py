@@ -94,8 +94,12 @@ def verify(user_id, source: str, official_id: str, record_type: str | None, reco
         return fail("pending", "El identificador devolvió varios registros (ambiguo).")
     m = matches[0]
     raw = json.dumps(evidence, ensure_ascii=False, sort_keys=True).encode()
-    ev = lake.bronze_put(user_id, "org_evidence", f"bronze/{user_id}/org_evidence/{lake.sha256(raw)}.json", raw,
-                         "application/json", {"source": source, "official_id": official_id})
+    try:
+        ev = lake.bronze_put(user_id, "org_evidence", f"bronze/{user_id}/org_evidence/{lake.sha256(raw)}.json", raw,
+                             "application/json", {"source": source, "official_id": official_id})
+    except Exception:                                   # StorageError, red o timeout (igual que en la carga de soportes)
+        # Sin evidencia conservada no hay verificación: se informa el error y el borrador sigue sin verificar.
+        return fail("error", "No se pudo conservar la evidencia de la consulta.")
     org_doc = {"source": source, "official_id": m.official_id, "name": m.name, "municipio": m.municipio,
                "departamento": m.departamento, "estado_registral": m.estado_registral, "status": "verified",
                "verified_at": _now(), "evidence_id": ev["_id"], "evidence_sha256": ev["sha256"]}

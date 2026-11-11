@@ -108,3 +108,29 @@ def test_respuesta_malformada_no_concede(client, alice):
     mock_source("snies", body="[1, 2]")
     r = client.post("/api/organizations/search", json={"source": "snies", "query": "x"}, headers=alice["headers"]).json()
     assert r["organization_status"] == "error" and r["candidates"] == []
+
+
+def test_fallo_al_guardar_evidencia_no_concede_verificacion(client, alice):
+    """Si Storage rechaza la evidencia (p. ej. bucket que no admite JSON), no hay verificación ni error 500."""
+    from app.core import storage as st
+    mock_source("snies", [snies_row("1101", "UNIVERSIDAD SINTETICA", "B", "B")])
+    e = client.post("/api/education", json=edu_payload(), headers=alice["headers"]).json()
+    real = st.get_storage()
+
+    class RechazaJson:
+        def put(self, key, data, ctype):
+            if ctype == "application/json":
+                raise st.StorageError("Supabase put HTTP 400")
+            return real.put(key, data, ctype)
+
+        def get(self, *a): return real.get(*a)
+        def size(self, *a): return real.size(*a)
+        def delete(self, *a): return real.delete(*a)
+    st.set_storage(RechazaJson())
+    try:
+        r = client.post("/api/organizations/verify", json={"source": "snies", "official_id": "1101", "record_type": "education_higher",
+                                                           "record_id": e["id"]}, headers=alice["headers"])
+    finally:
+        st.set_storage(real)
+    assert r.status_code == 200 and r.json()["organization_status"] == "error" and r.json()["organization"] is None
+    assert client.get("/api/education", headers=alice["headers"]).json()[0]["organization_status"] == "error"

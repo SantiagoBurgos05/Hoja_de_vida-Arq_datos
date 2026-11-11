@@ -10,6 +10,7 @@ import os
 import shutil
 from pathlib import Path
 import httpx
+from urllib.parse import urlparse
 from .config import get_settings
 
 
@@ -60,7 +61,9 @@ class LocalStorage(Storage):
 
 class SupabaseStorage(Storage):
     def __init__(self, url: str, key: str, bucket: str, transport: httpx.BaseTransport | None = None):
-        self.base = url.rstrip("/") + "/storage/v1"
+        # Solo esquema + host: si se pega la URL de la Data API (…/rest/v1/), se ignora la ruta.
+        u = urlparse(url.strip())
+        self.base = f"{u.scheme}://{u.netloc}/storage/v1"
         self.h = {"Authorization": f"Bearer {key}", "apikey": key}
         self.bucket, self.transport = bucket, transport
 
