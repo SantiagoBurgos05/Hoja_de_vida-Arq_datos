@@ -71,7 +71,7 @@ with sync_playwright() as pw:
     with p2.expect_download() as dl: rec2.get_by_role("button", name="Descargar").click()
     path = dl.value.path(); assert Path(path).read_bytes() == PDF; ok("certificado recuperado en otra sesión, idéntico byte a byte, sin volver a cargarlo")
 
-    # ---- Experiencia (RUES deshabilitado) + tiempo total
+    # ---- Experiencia: empresa verificada en RUES (fuente simulada) + certificado laboral + tiempo total
     p2.get_by_role("link", name="3-4 · Experiencia").click()
     p2.get_by_role("button", name="Agregar experiencia").click()
     w = p2.locator("article.record:visible").first
@@ -80,8 +80,13 @@ with sync_playwright() as pw:
     w.get_by_label("Cargo o contrato").fill("Analista")
     expect(w.get_by_text("Guardado", exact=True)).to_be_visible(timeout=8000)
     w.get_by_text("Buscar y verificar entidad").click(); w.get_by_label("o identificador oficial (NIT/código)").fill("900000000"); w.get_by_role("button", name="Buscar").click()
-    expect(w.get_by_text("RUES: sin API")).to_be_visible(timeout=8000)
-    expect(w.get_by_text("Entidad sin verificar")).to_be_visible(); expect(w.locator("input[type=file]")).to_be_disabled(); ok("RUES deshabilitado: borrador conservado sin verificación")
+    expect(w.locator("ul.candidates li")).to_have_count(1, timeout=8000)
+    expect(w.get_by_text("Entidad sin verificar")).to_be_visible(); expect(w.locator("input[type=file]")).to_be_disabled()
+    w.locator("ul.candidates li").first.get_by_role("button", name="Verificar esta").click()
+    expect(w.get_by_text("Entidad verificada en fuente oficial")).to_be_visible(timeout=8000)
+    w.locator("input[type=file]").set_input_files(str(PDF_PATH))
+    expect(w.get_by_text("certificado_sintetico.pdf")).to_be_visible(timeout=8000)
+    ok("empresa verificada por NIT en RUES y certificado laboral adjunto")
     p2.reload(); p2.get_by_role("link", name="3-4 · Experiencia").click()
     expect(p2.locator("table.time tr.total td").nth(1)).to_have_text("2"); ok("tiempo total calculado (2 años)")
     p2.screenshot(path=str(OUT / "03_experiencia.png"), full_page=True)

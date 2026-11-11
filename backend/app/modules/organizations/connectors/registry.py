@@ -22,6 +22,27 @@ _DEFS = {
     "due": ("school", "cfw5-qzt5",
             {"id": "codigo_dane", "name": "nombre_establecimiento", "municipio": "municipio", "departamento": "departamento"},
             {"estado_template": "Reportado en el directorio del MEN, año {a_o}", "id_numeric": True, "snapshot": "a_o"}),
+    # RUES: «Personas Naturales, Personas Jurídicas y ESAL» de Confecámaras (operador del RUES), sincronizado con el RUES.
+    # 9,4 M de filas. Se EXCLUYEN las personas naturales (datos personales) y nunca se piden columnas de
+    # representantes legales. Identificador: NIT sin dígito de verificación. Sin columna de municipio: se usa la cámara.
+    "rues": ("company", "c82u-588k",
+             {"id": "nit", "name": "razon_social", "municipio": "camara_comercio", "nit": "nit"},
+             {"estado_template": "{estado_matricula}; matrícula {matricula} ({camara_comercio}); último año renovado {ultimo_ano_renovado}",
+              "id_numeric": True, "nit_exact": True, "timeout_s": 20, "id_len": (8, 10),   # 99,9 % de los NIT tienen 9 dígitos
+              "select": ("nit", "digito_verificacion", "razon_social", "sigla", "organizacion_juridica", "estado_matricula",
+                         "camara_comercio", "matricula", "fecha_matricula", "ultimo_ano_renovado", "fecha_cancelacion",
+                         "fecha_actualizacion"),
+              "base_where": "organizacion_juridica != 'PERSONA NATURAL' AND nit IS NOT NULL",
+              "active": ("estado_matricula", "ACTIVA")}),
+    # SIGEP: «Universo de entidades» de Función Pública (administra el SIGEP). El código de institución es el código
+    # SIGEP (coincide con el directorio de MinTIC kqut-4h4r) y es único; el NIT se repite entre dependencias.
+    "sigep": ("public_entity", "h7zv-k39x",
+              {"id": "dm_institucion_cod_institucion", "name": "nombre", "municipio": "municipio",
+               "departamento": "departamento", "nit": "ccb_nit_inst"},
+              {"estado_template": "{estado_ins} en el Universo de entidades (Función Pública); orden {orden}",
+               "id_numeric": True, "nit_exact": True,
+               "select": ("dm_institucion_cod_institucion", "nombre", "ccb_nit_inst", "orden", "nivel_institucion",
+                          "naturaleza_juridica", "sector", "municipio", "departamento", "estado_ins")}),
 }
 
 
@@ -58,12 +79,10 @@ def set_connector(source: str, c: Connector | None) -> None:
 def get_connector(source: str) -> Connector:
     if source in _overrides:
         return _overrides[source]
-    if source in _DEFS:
-        return make(source)
-    s = get_settings()
-    if source == "rues":
-        # Sin API/dataset oficial verificado. Habilitar solo con canal autorizado y un conector propio.
-        return Disabled("rues", "company", "RUES: sin API o dato abierto oficial verificado; requiere canal autorizado.")
-    if source == "sigep":
-        return Disabled("sigep", "public_entity", "SIGEP: sin API oficial verificada; requiere canal autorizado.")
-    raise KeyError(source)
+    if source not in _DEFS:
+        raise KeyError(source)
+    if source in get_settings().disabled_sources:
+        # Interruptor operativo (DISABLED_SOURCES): la fuente queda apagada sin cambiar código; se conserva el borrador.
+        kind = _DEFS[source][0]
+        return Disabled(source, kind, f"{source.upper()}: fuente deshabilitada temporalmente por la administración.")
+    return make(source)

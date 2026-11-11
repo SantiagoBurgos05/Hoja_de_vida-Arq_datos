@@ -2,7 +2,13 @@
 
 Fuente de verdad: lo que NO está en «Probado» no debe presentarse como hecho.
 
-## Revisión actual: paso 5 en curso — MongoDB Atlas (2026-11-11)
+## Revisión actual: RUES y SIGEP habilitados (2026-11-11)
+
+- **RUES** con el dataset oficial de Confecámaras `c82u-588k` (sincronizado con el RUES) y **SIGEP** con el «Universo de entidades» de Función Pública `h7zv-k39x`. Consultados **en vivo**: Bancolombia por NIT y nombre, MinEducación por código SIGEP `0011`, NIT compartido del Distrito. Se excluyen personas naturales y datos de representantes; NIT de relleno no se consulta; varias matrículas activas = ambiguo.
+- Backend **142 pruebas aprobadas** (incluye 9 nuevas de RUES/SIGEP); frontend 13 y compilación; E2E 15, ahora con **empresa verificada por NIT y certificado laboral adjunto** (fuente simulada). `check_sources.py` en vivo: las 5 fuentes correctas.
+- Pendiente: desplegar (commit + push) y probarlo en la URL pública. Sin revisión ni aceptación humana (T-014).
+
+## Revisión anterior: paso 5 — infraestructura (2026-11-11)
 
 - **Atlas M0 probado en vivo** con `scripts/check_atlas.py` desde el PC local (MongoDB 8.0.37, host `hv-cluster.zkltgmq.mongodb.net`): conexión, `init_db` (colecciones con `$jsonSchema` e índices), `init_db` repetido (`collMod`, permiso `dbAdmin`), validador que rechaza un documento inválido, índices único/parcial/TTL, y escritura y borrado de un evento sintético: **todo correcto**.
 - Acceso de red limitado por ahora a la IP del PC; falta habilitar el acceso de Render.
@@ -24,7 +30,7 @@ Fuente de verdad: lo que NO está en «Probado» no debe presentarse como hecho.
 - Fuentes educativas **consultadas en vivo** en datos.gov.co: SNIES (`n5yy-8nav`), SIET (`gpje-sixt`) y establecimientos (`cfw5-qzt5`). Las columnas supuestas de SNIES y establecimientos eran incorrectas y se corrigieron; establecimientos repite cada colegio por año y ahora se usa el año más reciente.
 - `scripts/check_sources.py` en vivo: búsqueda, verificación por identificador e identificador inexistente correctos en las tres fuentes. Recorrido por la API con SNIES real: verificación de la entidad y carga de un certificado sintético correctas.
 - Backend: **114 pruebas aprobadas**; frontend 13 y compilación; E2E 15 (fuente simulada con columnas reales).
-- Límites: SNIES con actualización 2022-07-08 y SIET con corte 11/2020; RUES/SIGEP siguen deshabilitados. Sin revisión ni aceptación humana (T-012). Detalle: [paso-03-fuentes.md](paso-03-fuentes.md).
+- Límites: SNIES con actualización 2022-07-08 y SIET con corte 11/2020; RUES/SIGEP seguían deshabilitados en ese momento (habilitados después, ver revisión actual). Sin revisión ni aceptación humana (T-012). Detalle: [paso-03-fuentes.md](paso-03-fuentes.md).
 
 ## Revisión anterior: paso 2 (2026-11-10, Windows, rama `paso-02-consistencia`)
 
@@ -63,7 +69,7 @@ Detalle, límites y comandos: [paso-01-local.md](paso-01-local.md). Los resultad
 - Pruebas visuales de la UI en móvil y accesibilidad con lector de pantalla: no realizadas.
 
 ## Pendiente / limitaciones declaradas
-- **RUES y SIGEP**: deshabilitados. No se halló API ni dato abierto oficial verificado; no se hace scraping. Requiere decisión sobre un canal autorizado.
+- **RUES y SIGEP**: habilitados con datos abiertos oficiales (Confecámaras y Función Pública). No cubren personas naturales comerciantes, matrículas antiguas sin NIT ni entidades públicas liquidadas (ver `docs/fuentes.md`).
 - **DUE / Buscando Colegio**: se usa el dataset de establecimientos educativos como aproximación; no confirmado como el mismo origen.
 - Plantilla: solo 5 filas de educación superior y 2 de idiomas (se advierte; el excedente no se imprime).
 - No hay recuperación de contraseña ni verificación de correo. Hay límites de uso en registro, consultas a fuentes y cargas (paso 4), no un límite global para todas las rutas.

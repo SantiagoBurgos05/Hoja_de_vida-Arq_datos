@@ -45,13 +45,26 @@ class SocrataConnector(Connector):
     `estado_template`: texto del estado registral a partir de la fila (p. ej. "{estado} ({fecha_actualizacion})").
     `id_numeric`: la columna del identificador es numérica; un identificador no numérico no se consulta.
     `snapshot`: columna de corte (p. ej. año) cuando el dataset repite la entidad por periodo: se usa el corte
-    más reciente en que aparece el identificador."""
+    más reciente en que aparece el identificador.
+    `select`: columnas que se piden a la fuente. Limita la respuesta (y la evidencia guardada) a datos de la
+    entidad: nunca se piden nombres ni documentos de representantes u otras personas.
+    `base_where`: condición fija de toda consulta (p. ej. excluir personas naturales del registro mercantil).
+    `active`: (columna, valor). Si un identificador devuelve varias filas y exactamente una está en ese estado,
+    se usa esa (p. ej. matrícula ACTIVA frente a matrículas canceladas del mismo NIT).
+    `nit_exact`: la columna NIT guarda solo dígitos: se consulta por igualdad (con y sin dígito de verificación)
+    en lugar del prefiltro amplio, necesario en datasets grandes.
+    `timeout_s`: tiempo máximo propio de la fuente (datasets de millones de filas).
+    `id_len`: (mínimo, máximo) de dígitos del identificador; fuera de ese rango no se consulta (NIT de relleno como «1»)."""
 
     def __init__(self, source: str, kind: str, dataset: str, field_map: dict, transport: httpx.BaseTransport | None = None,
-                 *, estado_template: str | None = None, id_numeric: bool = False, snapshot: str | None = None):
+                 *, estado_template: str | None = None, id_numeric: bool = False, snapshot: str | None = None,
+                 select: tuple[str, ...] | None = None, base_where: str | None = None, active: tuple[str, str] | None = None,
+                 nit_exact: bool = False, timeout_s: float | None = None, id_len: tuple[int, int] | None = None):
         self.source, self.kind, self.dataset, self.fm = source, kind, dataset, field_map
         self.transport = transport
         self.estado_template, self.id_numeric, self.snapshot = estado_template, id_numeric, snapshot
+        self.select, self.base_where, self.active = select, base_where, active
+        self.nit_exact, self.timeout_s, self.id_len = nit_exact, timeout_s, id_len
 
     # --- red -----------------------------------------------------------------
     def _get(self, params: dict) -> tuple[list[dict], str]:
@@ -61,7 +74,7 @@ class SocrataConnector(Connector):
         if host not in s.allowed_connector_hosts:
             raise ConnectorError(f"Host no permitido: {host}")
         try:
-            with httpx.Client(timeout=s.connector_timeout_s, follow_redirects=False, transport=self.transport) as c:
+            with httpx.Client(timeout=self.timeout_s or s.connector_timeout_s, follow_redirects=False, transport=self.transport) as c:
                 r = c.get(url, params=params, headers={"Accept": "application/json"})
         except httpx.HTTPError as e:
             raise ConnectorError(f"Fuente no disponible: {type(e).__name__}") from e
@@ -78,7 +91,11 @@ class SocrataConnector(Connector):
         return data, r.text
 
     def _params(self, where: str, limit: int) -> dict:
+        if self.base_where:
+            where = f"({self.base_where}) AND {where}"
         p = {"$where": where, "$limit": str(limit)}
+        if self.select:
+            p["$select"] = ",".join(self.select)
         if self.snapshot:
             p["$order"] = f"{self.snapshot} DESC"
         return p
@@ -108,7 +125,9 @@ class SocrataConnector(Connector):
         )
 
     def _valid_id(self, official_id: str) -> bool:
-        return bool(official_id) and (not self.id_numeric or official_id.isdigit())
+        if not official_id or (self.id_numeric and not official_id.isdigit()):
+            return False
+        return not self.id_len or self.id_len[0] <= len(official_id) <= self.id_len[1]
 
     def _latest(self, rows: list[dict]) -> list[dict]:
         """Con columna de corte: conserva solo las filas del corte más reciente."""
@@ -126,7 +145,11 @@ class SocrataConnector(Connector):
         oid = (official_id or "").strip()
         if oid:
             d = _digits(oid)
-            if self.fm.get("nit") and len(d) >= 9:
+            if self.fm.get("nit") and len(d) >= 9 and self.nit_exact:
+                # NIT solo con dígitos en la fuente: igualdad con y sin el dígito de verificación final.
+                nit = d[:9]
+                where.append(f"{self.fm['nit']} in ('{nit}', '{d}')")
+            elif self.fm.get("nit") and len(d) >= 9:
                 # NIT con formatos variables en la fuente (puntos, guion, espacios): prefiltro amplio y comparación exacta aquí.
                 nit = d[:9]
                 where.append(f"{self.fm['nit']} like '%{'%'.join(nit)}%'")
@@ -156,5 +179,10 @@ class SocrataConnector(Connector):
             return [], {"raw": "", "motivo": "identificador con formato no válido para la fuente"}
         rows, raw = self._get(self._params(f"{self.fm['id']}='{_esc(oid)}'", 50 if self.snapshot else 5))
         rows = self._latest([r for r in rows if str(r.get(self.fm["id"], "")).strip() == oid])
+        if self.active and len(rows) > 1:
+            col, val = self.active
+            act = [r for r in rows if str(r.get(col, "")).strip().upper() == val]
+            if len(act) == 1:
+                rows = act                          # una sola vigente: es la entidad; las demás son históricas
         cands = [c for c in (self._to_candidate(r) for r in rows) if c]
         return cands, {"raw": raw, "dataset": self.dataset}

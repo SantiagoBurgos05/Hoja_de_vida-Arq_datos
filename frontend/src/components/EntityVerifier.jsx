@@ -3,7 +3,7 @@ import { api } from "../lib/api.js";
 import { Badge } from "./ui.jsx";
 import { orgLabel } from "../lib/format.js";
 
-// Fuentes por tipo de registro. RUES/SIGEP pueden estar deshabilitadas en el servidor (sin vía oficial verificada).
+// Fuentes por tipo de registro. Cualquiera puede estar deshabilitada en el servidor (DISABLED_SOURCES): se conserva el borrador.
 export const SOURCES = {
   education_basic: [["due", "DUE / Buscando Colegio"]],
   education_higher: [["snies", "SNIES (educación superior)"], ["siet", "SIET (educación para el trabajo)"]],

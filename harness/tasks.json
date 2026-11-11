@@ -35,6 +35,10 @@
     {"id": "T-013", "title": "Paso 4: operación del Data Lake y protección de recursos", "feature": ["RF06", "RF08", "RF10"], "depends_on": ["T-012"], "role": "desarrollo",
      "allowed_paths": ["backend/app/", "backend/tests/", "frontend/src/components/Documents.jsx", ".github/workflows/", "render.yaml", ".env.example", "harness/features.json", "docs/"],
      "acceptance": ["Mantenimiento idempotente: cargas interrumpidas, borrados pendientes, retención, conciliación de Silver y Gold; un paso fallido no detiene los demás y queda registrado", "Ejecución programada sin costo (workflow) y por consola", "Cuota de almacenamiento por usuario con consulta de uso", "Límites de uso en registro, consultas a fuentes y cargas; IP real solo detrás de proxy de confianza"],
-     "checks": ["validate", "pytest:backend/tests", "npm:test", "npm:build", "local:e2e"]}
+     "checks": ["validate", "pytest:backend/tests", "npm:test", "npm:build", "local:e2e"]},
+    {"id": "T-014", "title": "RUES y SIGEP con datos abiertos oficiales", "feature": ["RF05"], "depends_on": ["T-012"], "role": "desarrollo",
+     "allowed_paths": ["backend/app/modules/organizations/", "backend/app/core/config.py", "backend/tests/", "frontend/src/components/EntityVerifier.jsx", "tests_e2e/", "scripts/check_sources.py", "docs/"],
+     "acceptance": ["Empresas verificadas por NIT en el dataset de Confecámaras sincronizado con el RUES; entidades públicas por código SIGEP en el Universo de entidades de Función Pública", "Sin personas naturales ni datos de representantes en consultas ni evidencia", "NIT de relleno no se consulta; varias matrículas activas o NIT compartido no conceden verificación", "Certificados laborales habilitados tras verificar la entidad", "Fuente apagable por configuración", "Comprobación en vivo de las 5 fuentes"],
+     "checks": ["validate", "pytest:backend/tests", "npm:test", "npm:build", "local:e2e", "live:sources"]}
   ]
 }

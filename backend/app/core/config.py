@@ -39,6 +39,7 @@ class Settings:
     allowed_connector_hosts: list[str] = field(default_factory=lambda: [h for h in os.getenv("ALLOWED_CONNECTOR_HOSTS", "www.datos.gov.co").split(",") if h])
     socrata_url_template: str = field(default_factory=lambda: os.getenv("SOCRATA_URL_TEMPLATE", "https://www.datos.gov.co/resource/{dataset}.json"))
     connector_timeout_s: float = float(os.getenv("CONNECTOR_TIMEOUT_S", "8"))
+    disabled_sources: list[str] = field(default_factory=lambda: [x.strip().lower() for x in os.getenv("DISABLED_SOURCES", "").split(",") if x.strip()])
     connector_max_bytes: int = 1_000_000
     admin_token: str = field(default_factory=lambda: os.getenv("ADMIN_TOKEN", ""))
     temp_retention_days: int = 30

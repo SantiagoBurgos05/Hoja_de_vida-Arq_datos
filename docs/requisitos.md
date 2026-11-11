@@ -31,4 +31,4 @@ Verificar una organización **no** acredita que el usuario estudió o trabajó a
 ## Fuera de alcance (declarado)
 - Autenticación de certificados ante la entidad emisora.
 - Firma electrónica; la firma es manuscrita en el PDF impreso.
-- Integración RUES/SIGEP en vivo (sin API oficial verificada): conectores deshabilitados por defecto.
+- RUES/SIGEP se verifican con datos abiertos oficiales (Confecámaras `c82u-588k`, Función Pública `h7zv-k39x`), no con las consultas en línea de esos portales; personas naturales comerciantes no se verifican.

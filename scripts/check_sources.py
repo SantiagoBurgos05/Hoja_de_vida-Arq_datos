@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Comprobación EN VIVO de las fuentes educativas contra datos.gov.co (manual; requiere internet).
+"""Comprobación EN VIVO de las fuentes (SNIES, SIET, DUE, RUES, SIGEP) contra datos.gov.co (manual; requiere internet).
 
 Para cada fuente: busca por nombre (y municipio), toma la primera coincidencia y la verifica por su
 identificador oficial con el mismo conector que usa la API. Comprueba además que un identificador
@@ -26,6 +26,8 @@ CASES = [
     ("snies", "minuto de dios", "bogota", "999999"),
     ("siet", "ensenanza", "bogota", "99999999"),
     ("due", "san bartolome", "bogota", "999999999999"),
+    ("rues", "bancolombia", "medellin", "1"),
+    ("sigep", "educacion nacional", None, "99999"),
 ]
 
 

@@ -91,7 +91,19 @@ def test_fallo_transitorio_no_revoca_verificacion_previa(client, alice):
     assert client.get("/api/education", headers=alice["headers"]).json()[0]["organization_status"] == "verified"
 
 
-def test_rues_y_sigep_deshabilitados_por_defecto(client, alice):
+def test_fuente_deshabilitable_por_configuracion(client, alice):
+    """DISABLED_SOURCES apaga una fuente sin cambiar código: no consulta, no verifica, conserva el borrador."""
+    from app.core.config import get_settings
+    s = get_settings()
+    old = s.disabled_sources
+    s.disabled_sources = ["rues", "sigep"]
+    try:
+        _run_fuente_deshabilitada(client, alice)
+    finally:
+        s.disabled_sources = old
+
+
+def _run_fuente_deshabilitada(client, alice):
     w = client.post("/api/work", json=work_payload(), headers=alice["headers"]).json()
     r = verify(client, alice, "rues", "900000000", "work", w["id"]).json()
     assert r["organization_status"] == "pending" and "RUES" in r["message"]
