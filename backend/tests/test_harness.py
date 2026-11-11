@@ -71,6 +71,27 @@ def test_huella_real_cambia_con_archivo_no_versionado(hz):
     assert hz.tree() == a
 
 
+def test_sin_mongo_no_se_registra_intento(hz, monkeypatch):
+    s = {"T-003": {"status": "running", "fails": 2}}
+    hz.save(s)
+    monkeypatch.setattr(hz, "mongo_ready", lambda uri: "ServerSelectionTimeoutError")
+    monkeypatch.setattr(hz, "run_check", lambda c: pytest.fail("no debe ejecutar checks sin MongoDB"))
+    class A: task = "T-003"
+    with pytest.raises(SystemExit) as ex:
+        hz.cmd_check(A)
+    assert "no se registró" in str(ex.value)
+    assert hz.state()["T-003"] == {"status": "running", "fails": 2}          # sin intento ni bloqueo
+    assert not hz.EVID.exists() or not list(hz.EVID.glob("T-003-*.json"))
+
+
+def test_archivos_del_harness_no_ensucian_el_arbol(hz, monkeypatch):
+    class R: stdout = "?? harness/evidence/T-010-1.json\n M harness/state.json\n"
+    monkeypatch.setattr(hz.subprocess, "run", lambda *a, **k: R)
+    assert hz.dirty() is False
+    R.stdout += "?? docs/otro.md\n"
+    assert hz.dirty() is True
+
+
 def test_cierre_exige_arbol_limpio(hz, monkeypatch):
     class A: task = "T-001"; verdict = "ok"; reviewer = "revision"; notes = ""
     monkeypatch.setattr(hz, "head", lambda: "x"); monkeypatch.setattr(hz, "tree", lambda: "t")

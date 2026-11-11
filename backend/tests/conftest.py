@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pymongo import MongoClient
 
-TEST_URI = os.getenv("TEST_MONGO_URI", "mongodb://127.0.0.1:27018")
+TEST_URI = os.getenv("TEST_MONGO_URI", "mongodb://127.0.0.1:27017")   # mismo valor por defecto que README, CI y E2E
 
 
 @pytest.fixture(scope="session")

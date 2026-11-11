@@ -1,0 +1,34 @@
+{
+  "task": "T-010",
+  "head": "dec5687d2031a8580bd7318d70af23cfa7cc6114",
+  "tree": "67b45827eade98d97f4ab0c60d1dc1a4fc3a3eac7d832aa0e8c2ae6a1d74ce71",
+  "dirty": true,
+  "at": "2026-11-10T23:47:38",
+  "results": {
+    "validate": {
+      "ok": true,
+      "tail": "validate ok"
+    },
+    "pytest:backend/tests": {
+      "ok": true,
+      "tail": "C:\\Users\\pc\\Documents\\UNIMINUTO\\ARQUITECTURA DE DATOS\\Hoja_de_Vida_Digital\\hoja-de-vida-digital\\.venv\\Lib\\site-packages\\fastapi\\testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.\n    from starlette.testclient import TestClient as TestClient  # noqa\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n"
+    },
+    "npm:test": {
+      "ok": true,
+      "tail": "(\u001b[22m\u001b[2m5 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 21\u001b[2mms\u001b[22m\u001b[39m\n \u001b[32m✓\u001b[39m tests/api.test.js \u001b[2m(\u001b[22m\u001b[2m4 tests\u001b[22m\u001b[2m)\u001b[22m\u001b[32m 45\u001b[2mms\u001b[22m\u001b[39m\n\n\u001b[2m Test Files \u001b[22m \u001b[1m\u001b[32m3 passed\u001b[39m\u001b[22m\u001b[90m (3)\u001b[39m\n\u001b[2m      Tests \u001b[22m \u001b[1m\u001b[32m13 passed\u001b[39m\u001b[22m\u001b[90m (13)\u001b[39m\n\u001b[2m   Start at \u001b[22m 23:46:28\n\u001b[2m   Duration \u001b[22m 550ms\u001b[2m (import 30%, tests 28%, transform 27%, worker 15%)\u001b[22m\n\n"
+    },
+    "npm:build": {
+      "ok": true,
+      "tail": "ntend@0.1.0 build\n> vite build\n\n\u001b[36mvite v8.3.7 \u001b[32mbuilding client environment for production...\u001b[36m\u001b[39m\ntransforming...\n✓ 29 modules transformed.\nrendering chunks...\ncomputing gzip size...\ndist/index.html                   0.45 kB │ gzip:  0.28 kB\ndist/assets/index-CR_r9EfT.css    3.65 kB │ gzip:  1.30 kB\ndist/assets/index-DhGhGKVA.js   250.52 kB │ gzip: 78.29 kB\n\n\u001b[32m✓ built in 543ms\u001b[39m\n"
+    },
+    "local:e2e": {
+      "ok": true,
+      "tail": "onsola/JS en el navegador\n\n15 comprobaciones E2E correctas\nE2E local completo; fuente SIMULADA. Servicios y base de prueba limpiados.\n\u001b[33m\n\u001b[1m(!)\u001b[22m outDir \u001b[37m\u001b[2mC:\\Users\\pc\\Documents\\UNIMINUTO\\ARQUITECTURA DE DATOS\\Hoja_de_Vida_Digital\\hoja-de-vida-digital\\.local-checks\\e2e\\frontend-24avp1or\u001b[22m\u001b[33m is not inside project root and will not be emptied.\nUse --emptyOutDir to override.\n\u001b[39m\n"
+    },
+    "docker:smoke": {
+      "ok": true,
+      "tail": "go-1 Stopped \n Container hvcheck-f6529c9a0b44-mongo-1 Removing \n Container hvcheck-f6529c9a0b44-mongo-1 Removed \n Network hvcheck-f6529c9a0b44_default Removing \n Volume hvcheck-f6529c9a0b44_mongo_data Removing \n Volume hvcheck-f6529c9a0b44_storage Removing \n Volume hvcheck-f6529c9a0b44_mongo_data Removed \n Volume hvcheck-f6529c9a0b44_storage Removed \n Network hvcheck-f6529c9a0b44_default Removed \n"
+    }
+  },
+  "ok": true
+}

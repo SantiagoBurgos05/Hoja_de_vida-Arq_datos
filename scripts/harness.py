@@ -39,10 +39,14 @@ def head():
     except Exception:
         return "sin-git"
 def dirty():
+    """Cambios sin commit, sin contar los archivos que escribe el propio harness (estado y evidencias):
+    si contaran, registrar un check dejaría siempre el árbol «sucio» y ninguna tarea podría cerrarse."""
     try:
-        return bool(subprocess.run(["git", "status", "--porcelain"], cwd=ROOT, capture_output=True, text=True).stdout.strip())
+        out = subprocess.run(["git", "status", "--porcelain", "-uall"], cwd=ROOT, capture_output=True, text=True).stdout
     except Exception:
         return False
+    paths = [ln[3:].strip().strip('"') for ln in out.splitlines() if ln.strip()]
+    return any(not p.startswith(TREE_EXCLUDE) for p in paths)
 
 # El propio harness escribe estos archivos al registrar checks y revisiones: no forman parte del contenido evaluado.
 TREE_EXCLUDE = ("harness/state.json", "harness/evidence/")
@@ -163,10 +167,34 @@ def cmd_start(a):
     print(f"{a.task} en ejecución. Rutas permitidas: {', '.join(T[a.task]['allowed_paths'])}")
 
 
+MONGO_CHECKS = ("pytest:", "local:e2e")
+
+
+def mongo_uri() -> str:
+    return os.getenv("TEST_MONGO_URI", "mongodb://127.0.0.1:27017")
+
+
+def mongo_ready(uri: str) -> str | None:
+    """None si MongoDB responde; si no, el motivo. Requisito de ENTORNO, no del código evaluado."""
+    try:
+        from pymongo import MongoClient
+        with MongoClient(uri, serverSelectionTimeoutMS=3000) as c:
+            c.admin.command("ping")
+        return None
+    except Exception as ex:
+        return f"{type(ex).__name__}"
+
+
 def cmd_check(a):
     s = state(); T = tasks(); e = entry(s, a.task)
     if e["status"] not in ("running", "checking", "review", "blocked"): sys.exit(f"estado inválido: {e['status']}")
     if e["status"] == "blocked": sys.exit("tarea bloqueada tras 3 fallos: replantear con la dirección")
+    # Un entorno incompleto no es un fallo del código: se informa y NO se registra intento ni se suma a `fails`.
+    if any(c.startswith(MONGO_CHECKS) for c in T[a.task]["checks"]):
+        why = mongo_ready(mongo_uri())
+        if why:
+            sys.exit(f"MongoDB no responde en {mongo_uri()} ({why}). Inícielo o defina TEST_MONGO_URI y repita; "
+                     "no se registró ningún intento.")
     e["status"] = "checking"; results = {}
     for c in T[a.task]["checks"]:
         ok, out = run_check(c); results[c] = {"ok": ok, "tail": out[-400:]}
