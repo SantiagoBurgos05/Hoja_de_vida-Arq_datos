@@ -4,7 +4,9 @@ WORKDIR /srv
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY app ./app
-RUN useradd -r -u 10001 app && chown -R app /srv
+RUN useradd -r -u 10001 app \
+    && mkdir -p /data/storage \
+    && chown -R app /srv /data/storage
 USER app
 EXPOSE 8000
 # Render define $PORT; en local usa 8000.

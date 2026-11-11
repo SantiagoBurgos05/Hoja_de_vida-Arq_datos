@@ -53,6 +53,13 @@ def public(d: dict) -> dict:
             "reason": d.get("reason"), "created_at": d["created_at"].isoformat()}
 
 
+def _same_operation(prev: dict, record_type: str, record_id: ObjectId, h: str) -> None:
+    """La idempotencia cubre la operación completa (registro destino + contenido), no solo el archivo:
+    reutilizar la clave con el mismo archivo para OTRO registro no puede devolver el documento anterior."""
+    if prev["sha256"] != h or prev["record_type"] != record_type or prev["record_id"] != record_id:
+        raise conflict("idempotency_key_reutilizada", "Esa clave de idempotencia ya se usó para otra carga (otro archivo u otro registro).")
+
+
 def upload(user_id, record_type: str, record_id: ObjectId, filename: str | None, declared_type: str | None,
            data: bytes, idempotency_key: str | None) -> tuple[dict, str]:
     """Devuelve (documento, resultado) con resultado in {created, idempotent, duplicate}."""
@@ -77,8 +84,7 @@ def upload(user_id, record_type: str, record_id: ObjectId, filename: str | None,
     if idempotency_key:
         prev = db.documents.find_one({"user_id": user_id, "idempotency_key": idempotency_key})
         if prev:
-            if prev["sha256"] != h:
-                raise conflict("idempotency_key_reutilizada", "Esa clave de idempotencia ya se usó con otro archivo.")
+            _same_operation(prev, record_type, record_id, h)
             return prev, "idempotent"
     dup = db.documents.find_one({"user_id": user_id, "record_id": record_id, "sha256": h, "document_status": {"$in": ["uploading", "ready"]}})
     if dup:
@@ -102,6 +108,8 @@ def upload(user_id, record_type: str, record_id: ObjectId, filename: str | None,
                                        "document_status": {"$in": ["uploading", "ready"]}}) or \
                 (db.documents.find_one({"user_id": user_id, "idempotency_key": idempotency_key}) if idempotency_key else None)
         if again:
+            if idempotency_key and again.get("idempotency_key") == idempotency_key:
+                _same_operation(again, record_type, record_id, h)
             return again, "idempotent" if idempotency_key else "duplicate"
         raise
 
@@ -110,7 +118,9 @@ def upload(user_id, record_type: str, record_id: ObjectId, filename: str | None,
             get_storage().delete(key)
         except Exception:
             pass
-        db.documents.update_one({"_id": doc_id}, {"$set": {"document_status": "rejected", "reason": reason, "rejected_at": _now()}})
+        # La clave se libera: el intento fallido no quedó registrado y el cliente puede reintentar con la misma clave.
+        db.documents.update_one({"_id": doc_id}, {"$set": {"document_status": "rejected", "reason": reason, "rejected_at": _now()},
+                                                  "$unset": {"idempotency_key": ""}})
 
     try:
         get_storage().put(key, data, real)

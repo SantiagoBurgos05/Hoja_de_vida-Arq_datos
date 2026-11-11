@@ -30,7 +30,7 @@ with sync_playwright() as pw:
     page.get_by_role("button", name="Crear cuenta").click()
     expect(page.get_by_text("1 · Datos personales").first).to_be_visible(); ok("registro e inicio de sesión")
     page.get_by_label("Primer apellido").fill("Prueba"); page.get_by_label("Nombres").fill("Ana Maria"); page.get_by_label("Número", exact=True).fill("1000000000")
-    expect(page.get_by_text("Guardado", exact=True).first).to_be_visible(timeout=8000); ok("autoguardado de datos personales")
+    expect(page.get_by_text("Guardado", exact=True).filter(visible=True).first).to_be_visible(timeout=8000); ok("autoguardado de datos personales")
     page.screenshot(path=str(OUT / "01_personales.png"), full_page=True)
     page.reload()
     expect(page.get_by_label("Primer apellido")).to_have_value("Prueba"); ok("persistencia tras recargar la página")
@@ -43,8 +43,8 @@ with sync_playwright() as pw:
     page.get_by_role("button", name="Agregar estudio superior").click()
     page.get_by_label("Nombre de los estudios o título").fill("Ingeniería de Sistemas")
     page.get_by_label("Institución (declarada)").first.fill("Universidad Sintetica del Norte")
-    expect(page.get_by_text("Guardado", exact=True).first).to_be_visible(timeout=8000)
-    rec = page.locator("article.record").first
+    expect(page.get_by_text("Guardado", exact=True).filter(visible=True).first).to_be_visible(timeout=8000)
+    rec = page.locator("article.record:visible").first
     expect(rec.get_by_text("Entidad sin verificar")).to_be_visible()
     expect(rec.locator("input[type=file]")).to_be_disabled(); ok("carga de certificados deshabilitada antes de verificar la entidad")
     rec.get_by_text("Buscar y verificar entidad").click()
@@ -64,7 +64,7 @@ with sync_playwright() as pw:
     # ---- Sesión 2 (contexto nuevo = otro navegador): recuperar sin volver a cargar
     ctx2 = b.new_context(accept_downloads=True); p2 = ctx2.new_page(); login(p2, EMAIL)
     p2.get_by_role("link", name="2 · Formación").click()
-    rec2 = p2.locator("article.record").first
+    rec2 = p2.locator("article.record:visible").first
     expect(rec2.get_by_text("certificado_sintetico.pdf")).to_be_visible(timeout=8000)
     expect(rec2.get_by_text("Entidad verificada en fuente oficial")).to_be_visible()
     expect(rec2.get_by_text("UNIVERSIDAD SINTETICA DEL NORTE", exact=False).first).to_be_visible()
@@ -74,7 +74,7 @@ with sync_playwright() as pw:
     # ---- Experiencia (RUES deshabilitado) + tiempo total
     p2.get_by_role("link", name="3-4 · Experiencia").click()
     p2.get_by_role("button", name="Agregar experiencia").click()
-    w = p2.locator("article.record").first
+    w = p2.locator("article.record:visible").first
     w.get_by_label("Empresa o entidad (declarada)").fill("Empresa Sintetica SAS")
     w.get_by_label("Fecha de ingreso").fill("2020-01-01"); w.get_by_label("Fecha de retiro").fill("2021-12-31")
     w.get_by_label("Cargo o contrato").fill("Analista")
@@ -86,6 +86,9 @@ with sync_playwright() as pw:
     expect(p2.locator("table.time tr.total td").nth(1)).to_have_text("2"); ok("tiempo total calculado (2 años)")
     p2.screenshot(path=str(OUT / "03_experiencia.png"), full_page=True)
 
+    # ---- Cambio y navegación inmediata (antes de 1,2 s): el borrador no se pierde y se guarda antes de exportar
+    p2.locator("article.record:visible").first.get_by_label("Cargo o contrato").fill("Coordinador")
+
     # ---- Exportar PDF
     p2.get_by_role("link", name="5-6 · Exportar").click()
     with p2.expect_download() as dl2: p2.get_by_role("button", name="Descargar PDF sobre el formato oficial").click()
@@ -93,6 +96,9 @@ with sync_playwright() as pw:
     from pypdf import PdfReader
     assert len(PdfReader(io.BytesIO(pdf_bytes)).pages) == 3 and pdf_bytes.startswith(b"%PDF"); ok("exportación a PDF de 3 páginas desde la interfaz")
     (OUT / "hoja_de_vida_e2e.pdf").write_bytes(pdf_bytes)
+    p2.reload(); p2.get_by_role("link", name="3-4 · Experiencia").click()
+    expect(p2.locator("article.record:visible").first.get_by_label("Cargo o contrato")).to_have_value("Coordinador")
+    ok("cambio conservado al cambiar de sección antes del autoguardado")
     ctx2.close()
 
     # ---- Aislamiento: otro usuario no ve nada

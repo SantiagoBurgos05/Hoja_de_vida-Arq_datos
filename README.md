@@ -19,3 +19,5 @@ python scripts/harness.py validate && python scripts/harness.py status
 python tests_e2e/e2e.py
 ```
 Documentación: `docs/` (estado real en `docs/estado.md`). **Lea `estado.md` antes de afirmar que algo funciona en producción.**
+
+Validación local reproducible (incluye PowerShell, E2E y permisos del volumen Docker): [paso 1](docs/paso-01-local.md).

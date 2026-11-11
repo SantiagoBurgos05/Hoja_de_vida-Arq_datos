@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, token, setUnauthorizedHandler, setWakingHandler } from "./lib/api.js";
 import { useAutosave } from "./lib/useAutosave.js";
+import { flushAll, hasPending } from "./lib/saver.js";
 import { ConflictBanner, SaveStatus } from "./components/ui.jsx";
 import Auth from "./pages/Auth.jsx";
 import Personal from "./pages/Personal.jsx";
@@ -13,7 +14,11 @@ const TABS = [["personal", "1 · Datos personales"], ["formacion", "2 · Formaci
 function useHashTab() {
   const read = () => (TABS.find(([k]) => `#/${k}` === window.location.hash) || TABS[0])[0];
   const [tab, setTab] = useState(read);
-  useEffect(() => { const f = () => setTab(read()); window.addEventListener("hashchange", f); return () => window.removeEventListener("hashchange", f); }, []);
+  useEffect(() => {
+    const f = () => { flushAll(); setTab(read()); };   // guardar lo pendiente al cambiar de sección
+    window.addEventListener("hashchange", f);
+    return () => window.removeEventListener("hashchange", f);
+  }, []);
   return tab;
 }
 
@@ -43,6 +48,7 @@ function Workspace({ user, onLogout }) {
   const saveResume = useCallback(async () => {
     const v = resumeRef.current;
     const saved = await api.put("/api/resume", { revision: v.revision, personal: v.personal, education_basic: v.education_basic, languages: v.languages });
+    resumeRef.current = { ...resumeRef.current, revision: saved.revision };   // un guardado encadenado usa ya la revisión nueva
     setResume((r) => ({ ...r, revision: saved.revision }));
   }, []);
   const editable = useMemo(() => (resume ? JSON.stringify([resume.personal, resume.education_basic, resume.languages]) : ""), [resume?.personal, resume?.education_basic, resume?.languages]); // eslint-disable-line
@@ -67,9 +73,11 @@ function Workspace({ user, onLogout }) {
               onKeepMine={async () => { const r = await api.get("/api/resume"); setResume((c) => ({ ...c, revision: r.revision })); auto.clearConflict(); setTimeout(auto.saveNow, 0); }} />}
           </>
         )}
-        {tab === "personal" && <Personal resume={resume} setResume={setResume} />}
-        {tab === "formacion" && <Formacion resume={resume} setResume={setResume} reloadResume={reloadResume} edu={edu} reloadEdu={reloadEdu} />}
-        {tab === "experiencia" && <Experiencia work={work} reloadWork={reloadWork} />}
+        {/* Las secciones editables permanecen montadas (solo se ocultan): cambiar de sección no descarta
+            borradores ni temporizadores de autoguardado. */}
+        <div hidden={tab !== "personal"}><Personal resume={resume} setResume={setResume} /></div>
+        <div hidden={tab !== "formacion"}><Formacion resume={resume} setResume={setResume} reloadResume={reloadResume} edu={edu} reloadEdu={reloadEdu} /></div>
+        <div hidden={tab !== "experiencia"}><Experiencia work={work} reloadWork={reloadWork} /></div>
         {tab === "exportar" && <Exportar />}
       </main>
     </>
@@ -81,7 +89,16 @@ export default function App() {
   const [checked, setChecked] = useState(false);
   const [waking, setWaking] = useState(false);
 
-  const logout = useCallback(async () => { try { await api.post("/api/auth/logout"); } catch { /* noop */ } token.clear(); setUser(null); }, []);
+  const logout = useCallback(async () => {
+    await flushAll();                                   // no perder cambios pendientes al salir
+    try { await api.post("/api/auth/logout"); } catch { /* noop */ }
+    token.clear(); setUser(null);
+  }, []);
+  useEffect(() => {
+    const warn = (e) => { if (hasPending()) { flushAll(); e.preventDefault(); e.returnValue = ""; } };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, []);
   useEffect(() => {
     setUnauthorizedHandler(() => { token.clear(); setUser(null); });
     setWakingHandler(setWaking);

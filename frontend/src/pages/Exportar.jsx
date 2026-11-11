@@ -1,15 +1,19 @@
 import React, { useEffect, useState } from "react";
 import { api, downloadBlob } from "../lib/api.js";
+import { flushAll } from "../lib/saver.js";
 import { Section } from "../components/ui.jsx";
 
 export default function Exportar() {
   const [warnings, setWarnings] = useState([]);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
-  useEffect(() => { api.get("/api/export/preview").then((r) => setWarnings(r.warnings)).catch((e) => setErr(e.message)); }, []);
+  useEffect(() => { flushAll().then(() => api.get("/api/export/preview")).then((r) => setWarnings(r.warnings)).catch((e) => setErr(e.message)); }, []);
   async function go() {
     setBusy(true); setErr("");
-    try { await downloadBlob("/api/export/pdf", "hoja_de_vida.pdf"); } catch (e) { setErr(e.message); } finally { setBusy(false); }
+    try {
+      if (!(await flushAll())) throw new Error("Hay cambios sin guardar. Revise los avisos de guardado antes de exportar.");
+      await downloadBlob("/api/export/pdf", "hoja_de_vida.pdf");
+    } catch (e) { setErr(e.message); } finally { setBusy(false); }
   }
   return (
     <>

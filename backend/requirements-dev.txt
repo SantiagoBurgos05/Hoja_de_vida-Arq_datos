@@ -3,3 +3,5 @@ pytest==9.2.0
 pytest-cov==7.1.0
 pillow==13.0.0
 pypdfium2==5.15.2
+pdfplumber==0.11.10
+playwright==1.65.0

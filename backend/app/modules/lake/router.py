@@ -35,7 +35,7 @@ def refresh(user=CurrentUser):
 
 @router.get("/gold")
 def gold(user=CurrentUser):
-    return [{"metric": g["metric"], "dimension": g["dimension"], "value": g["value"], "k": g.get("k")}
+    return [{"metric": g["metric"], "dimension": g["dimension"], "value": g["value"], "personas": g.get("personas"), "k": g.get("k")}
             for g in get_db().gold_metrics.find({}).sort([("metric", 1), ("dimension", 1)])]
 
 

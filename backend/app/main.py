@@ -2,6 +2,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from .core.config import get_settings
 from .core.db import init_db, close_client, get_db
 from .modules.identity.router import router as identity
@@ -36,11 +37,12 @@ def create_app() -> FastAPI:
 
     @app.get("/api/health")
     def health():
+        # MongoDB es una dependencia necesaria: si falla, 503 para que el alojamiento no considere sana la API.
         try:
             get_db().command("ping")
             return {"status": "ok", "db": "ok"}
         except Exception:
-            return {"status": "degraded", "db": "error"}
+            return JSONResponse({"status": "degraded", "db": "error"}, status_code=503)
 
     for r in (identity, resume, organizations, documents, lake, export):
         app.include_router(r)

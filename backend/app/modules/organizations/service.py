@@ -44,6 +44,7 @@ def _set_record_status(user_id, record_type, record_id, status: str, org_id=None
     if status == "verified":
         upd["organization_id"] = org_id
     coll.update_one({"_id": record_id}, {"$set": upd})
+    lake.silver_sync_record(user_id, record_type, record_id)
 
 
 def verify(user_id, source: str, official_id: str, record_type: str | None, record_id: ObjectId | None) -> dict:

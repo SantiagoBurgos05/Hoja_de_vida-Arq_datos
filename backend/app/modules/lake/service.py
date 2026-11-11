@@ -70,62 +70,104 @@ def silver_upsert(owner_id, kind: str, source_id: str, data: dict, derived_from:
     return lo_id
 
 
+SILVER_KIND = {"education_higher": "education", "work": "work"}
+_OPERATIONAL = {"education": "education_records", "work": "work_records"}
+
+
+def _silver_data(db, owner_id, kind: str, rec: dict) -> tuple[dict, list]:
+    """Proyección estandarizada (mayúsculas sin tildes, fechas ISO) SIN identificadores personales directos
+    (documento, dirección, teléfono, correo, nombres)."""
+    docs = [d["lake_object_id"] for d in db.documents.find({"user_id": owner_id, "record_id": rec["_id"], "document_status": "ready",
+                                                             "lake_object_id": {"$ne": None}})]
+    org = db.organizations.find_one({"_id": rec.get("organization_id")}) if rec.get("organization_id") else None
+    common = {"fuente_entidad": org["source"] if org else None, "municipio_entidad": _norm(org["municipio"]) if org else None,
+              "organization_status": rec.get("organization_status"), "record_status": rec.get("record_status")}
+    if kind == "education":
+        data = {"modalidad": rec.get("modalidad"), "graduado": rec.get("graduado"), "semestres": rec.get("semestres_aprobados"),
+                "anio_terminacion": (rec.get("terminacion") or {}).get("anio"), "nombre_estudios": _norm(rec.get("nombre_estudios"))}
+    else:
+        data = {"categoria_tiempo": rec.get("categoria_tiempo"), "tipo_entidad": rec.get("tipo_entidad"),
+                "fecha_ingreso": rec.get("fecha_ingreso"), "fecha_retiro": rec.get("fecha_retiro"), "es_actual": rec.get("es_actual")}
+    return {**data, **common}, docs
+
+
+def silver_sync_record(owner_id, record_type: str, record_id) -> None:
+    """Sincroniza Silver con UN registro operacional: lo actualiza si existe y lo retira si ya no existe.
+    Se invoca en cada creación, modificación, cambio de estado y eliminación del registro."""
+    kind = SILVER_KIND.get(record_type)
+    if kind is None:
+        return
+    db = get_db()
+    rec = db[_OPERATIONAL[kind]].find_one({"_id": record_id, "user_id": owner_id})
+    if rec is None:
+        silver_drop_record(owner_id, kind, str(record_id))
+        return
+    data, docs = _silver_data(db, owner_id, kind, rec)
+    silver_upsert(owner_id, kind, str(rec["_id"]), data, docs)
+
+
 def refresh_silver(owner_id) -> dict:
-    """Reconstruye Silver del usuario a partir de datos operacionales (estandarizados: mayúsculas sin tildes, fechas ISO).
-    Excluye identificadores personales directos (documento, dirección, teléfono, correo, nombres)."""
+    """Reconstruye Silver del usuario a partir de los datos operacionales vigentes y retira copias huérfanas."""
     db = get_db()
     n = 0
-    for e in db.education_records.find({"user_id": owner_id}):
-        docs = [d["lake_object_id"] for d in db.documents.find({"user_id": owner_id, "record_id": e["_id"], "document_status": "ready", "lake_object_id": {"$ne": None}})]
-        org = db.organizations.find_one({"_id": e.get("organization_id")}) if e.get("organization_id") else None
-        data = {"modalidad": e.get("modalidad"), "graduado": e.get("graduado"), "semestres": e.get("semestres_aprobados"),
-                "anio_terminacion": (e.get("terminacion") or {}).get("anio"),
-                "nombre_estudios": _norm(e.get("nombre_estudios")),
-                "fuente_entidad": org["source"] if org else None, "municipio_entidad": _norm(org["municipio"]) if org else None,
-                "organization_status": e.get("organization_status"), "record_status": e.get("record_status")}
-        silver_upsert(owner_id, "education", str(e["_id"]), data, docs)
-        n += 1
-    for w in db.work_records.find({"user_id": owner_id}):
-        docs = [d["lake_object_id"] for d in db.documents.find({"user_id": owner_id, "record_id": w["_id"], "document_status": "ready", "lake_object_id": {"$ne": None}})]
-        org = db.organizations.find_one({"_id": w.get("organization_id")}) if w.get("organization_id") else None
-        data = {"categoria_tiempo": w.get("categoria_tiempo"), "tipo_entidad": w.get("tipo_entidad"),
-                "fecha_ingreso": w.get("fecha_ingreso"), "fecha_retiro": w.get("fecha_retiro"), "es_actual": w.get("es_actual"),
-                "fuente_entidad": org["source"] if org else None, "municipio_entidad": _norm(org["municipio"]) if org else None,
-                "organization_status": w.get("organization_status"), "record_status": w.get("record_status")}
-        silver_upsert(owner_id, "work", str(w["_id"]), data, docs)
-        n += 1
-    return {"silver_records": n}
+    live: dict[str, set[str]] = {}
+    for kind, coll in _OPERATIONAL.items():
+        live[kind] = set()
+        for rec in db[coll].find({"user_id": owner_id}):
+            data, docs = _silver_data(db, owner_id, kind, rec)
+            silver_upsert(owner_id, kind, str(rec["_id"]), data, docs)
+            live[kind].add(str(rec["_id"]))
+            n += 1
+    removed = 0
+    for s in list(db.silver_records.find({"owner_id": owner_id}, {"kind": 1, "source_id": 1})):
+        if s["source_id"] not in live.get(s["kind"], set()):
+            silver_drop_record(owner_id, s["kind"], s["source_id"])
+            removed += 1
+    return {"silver_records": n, "removed": removed}
 
 
 def silver_drop_record(owner_id, kind: str, source_id: str) -> None:
-    get_db().silver_records.delete_one({"owner_id": owner_id, "kind": kind, "source_id": source_id})
+    """Retira la copia Silver de un registro eliminado y marca su objeto de catálogo como eliminado (el linaje conserva el hecho)."""
+    db = get_db()
+    cur = db.silver_records.find_one_and_delete({"owner_id": owner_id, "kind": kind, "source_id": source_id})
+    if cur and cur.get("lake_object_id"):
+        db.lake_objects.update_one({"_id": cur["lake_object_id"]}, {"$set": {"deleted": True, "deleted_at": _now()}})
 
 
 # ------------------------------------------------------------------- Gold
 def build_gold() -> dict:
     """Agrega Silver de TODOS los usuarios. Sin user_id ni datos personales.
-    Celdas con menos de k registros se suprimen (no se escriben)."""
+    Umbral de privacidad: una celda se publica solo si la aportan al menos k PERSONAS distintas
+    (no k registros: una persona con muchos registros no supera el umbral por sí sola)."""
     k = get_settings().gold_k_anonymity
     db = get_db()
     run_id = ObjectId()
-    inputs = list(db.silver_records.find({}, {"data": 1, "lake_object_id": 1}))
+    inputs = list(db.silver_records.find({}, {"owner_id": 1, "kind": 1, "data": 1, "lake_object_id": 1}))
     in_ids = [i["lake_object_id"] for i in inputs if i.get("lake_object_id")]
-    counts: dict[tuple[str, str], int] = {}
-    for r in db.silver_records.find({}):
-        d = r["data"]
+    records: dict[tuple[str, str], int] = {}
+    owners: dict[tuple[str, str], set] = {}
+
+    def add(cell: tuple[str, str], owner) -> None:
+        records[cell] = records.get(cell, 0) + 1
+        owners.setdefault(cell, set()).add(owner)
+
+    for r in inputs:
+        d, owner = r["data"], r["owner_id"]
         if r["kind"] == "education":
-            counts[("educacion_por_modalidad", str(d.get("modalidad")))] = counts.get(("educacion_por_modalidad", str(d.get("modalidad"))), 0) + 1
+            add(("educacion_por_modalidad", str(d.get("modalidad"))), owner)
         else:
-            counts[("experiencia_por_categoria", str(d.get("categoria_tiempo")))] = counts.get(("experiencia_por_categoria", str(d.get("categoria_tiempo"))), 0) + 1
-        st = ("registros_por_estado_entidad", f'{r["kind"]}:{d.get("organization_status")}')
-        counts[st] = counts.get(st, 0) + 1
+            add(("experiencia_por_categoria", str(d.get("categoria_tiempo"))), owner)
+        add(("registros_por_estado_entidad", f'{r["kind"]}:{d.get("organization_status")}'), owner)
     db.gold_metrics.delete_many({})
     written = suppressed = 0
-    for (metric, dim), v in sorted(counts.items()):
-        if v < k:
+    for cell in sorted(records):
+        metric, dim = cell
+        personas = len(owners[cell])
+        if personas < k:
             suppressed += 1
             continue
-        db.gold_metrics.insert_one({"metric": metric, "dimension": dim, "value": v, "computed_at": _now(), "run_id": run_id, "k": k})
+        db.gold_metrics.insert_one({"metric": metric, "dimension": dim, "value": records[cell], "personas": personas,
+                                    "computed_at": _now(), "run_id": run_id, "k": k})
         written += 1
     lo = db.lake_objects.insert_one({"layer": "gold", "kind": "metrics", "owner_id": None, "derived_from": in_ids,
                                      "run_id": run_id, "created_at": _now(), "deleted": False,

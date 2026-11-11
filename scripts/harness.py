@@ -2,12 +2,12 @@
 """Harness de desarrollo (One-Person Company).
 
 Máquina de estados por tarea: pending -> ready -> running -> checking -> review -> accepted ; blocked tras 3 fallos.
-Un commit nuevo (HEAD distinto) invalida checks y revisión.
+Un commit nuevo (HEAD distinto) o cualquier cambio en el árbol de trabajo (huella del contenido) invalida checks y revisión.
 Comandos: validate | status | start T | check T | review T --verdict ok|changes --reviewer R --notes N | close T
 Solo se ejecutan comandos de un registro cerrado (no hay ejecución arbitraria desde tasks.json).
 """
 from __future__ import annotations
-import argparse, json, os, re, subprocess, sys, time
+import argparse, hashlib, json, os, re, shutil, subprocess, sys, time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,6 +22,8 @@ CHECKS = {
     "validate": None,  # interno
     "npm:test": (["npm", "test"], ROOT / "frontend"),
     "npm:build": (["npm", "run", "build"], ROOT / "frontend"),
+    "local:e2e": ([PY, "scripts/local_checks.py", "e2e"], ROOT),
+    "docker:smoke": ([PY, "scripts/local_checks.py", "docker"], ROOT),
 }
 
 
@@ -40,6 +42,33 @@ def dirty():
         return bool(subprocess.run(["git", "status", "--porcelain"], cwd=ROOT, capture_output=True, text=True).stdout.strip())
     except Exception:
         return False
+
+# El propio harness escribe estos archivos al registrar checks y revisiones: no forman parte del contenido evaluado.
+TREE_EXCLUDE = ("harness/state.json", "harness/evidence/")
+
+
+def _git(*args) -> bytes:
+    return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, check=True).stdout
+
+
+def tree():
+    """Huella SHA-256 del contenido evaluado: HEAD + cambios sin commit (staged y unstaged) + archivos no versionados.
+    Con árbol limpio equivale a HEAD; con cambios, cualquier edición posterior produce otra huella."""
+    try:
+        h = hashlib.sha256(_git("rev-parse", "HEAD"))
+        excl = [f":(exclude){p}" for p in TREE_EXCLUDE]
+        h.update(_git("diff", "HEAD", "--binary", "--", ".", *excl))
+        for f in sorted(_git("ls-files", "--others", "--exclude-standard", "-z").decode("utf-8", "replace").split("\0")):
+            if not f or f.startswith(TREE_EXCLUDE):
+                continue
+            h.update(f.encode("utf-8"))
+            try:
+                h.update(hashlib.sha256((ROOT / f).read_bytes()).digest())
+            except OSError:
+                h.update(b"<ilegible>")
+        return h.hexdigest()
+    except Exception:
+        return "sin-git"
 
 
 def entry(s, t):
@@ -115,7 +144,12 @@ def run_check(c: str) -> tuple[bool, str]:
         r = subprocess.run([PY, "-m", "pytest", "-q", c.split(":", 1)[1].replace("backend/", "", 1)], cwd=ROOT / "backend", capture_output=True, text=True)
     else:
         cmd, cwd = CHECKS[c]
-        r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+        # En Windows npm es npm.cmd, no un ejecutable llamado npm.
+        executable = shutil.which(cmd[0])
+        if not executable:
+            return False, f"Comando no disponible: {cmd[0]}"
+        r = subprocess.run([executable, *cmd[1:]], cwd=cwd, capture_output=True,
+                           text=True, encoding="utf-8", errors="replace")
     return r.returncode == 0, (r.stdout + r.stderr)[-1500:]
 
 
@@ -136,9 +170,9 @@ def cmd_check(a):
     for c in T[a.task]["checks"]:
         ok, out = run_check(c); results[c] = {"ok": ok, "tail": out[-400:]}
     allok = all(r["ok"] for r in results.values())
-    ev = {"task": a.task, "head": head(), "dirty": dirty(), "at": time.strftime("%FT%T"), "results": results, "ok": allok}
+    ev = {"task": a.task, "head": head(), "tree": tree(), "dirty": dirty(), "at": time.strftime("%FT%T"), "results": results, "ok": allok}
     EVID.mkdir(exist_ok=True); (EVID / f"{a.task}-{int(time.time())}.json").write_text(json.dumps(ev, indent=2, ensure_ascii=False), encoding="utf-8")
-    e["check"] = {"ok": allok, "head": ev["head"]}; e.pop("review", None)
+    e["check"] = {"ok": allok, "head": ev["head"], "tree": ev["tree"]}; e.pop("review", None)
     if allok:
         e["status"] = "review"; e["fails"] = 0
     else:
@@ -150,15 +184,17 @@ def cmd_check(a):
 
 
 def fresh(e):
-    return e.get("check", {}).get("ok") and e["check"]["head"] == head()
+    """Vigencia: mismo commit Y mismo contenido evaluado (un cambio sin commit también invalida)."""
+    c = e.get("check", {})
+    return bool(c.get("ok")) and c.get("head") == head() and c.get("tree") == tree()
 
 
 def cmd_review(a):
     s = state(); e = entry(s, a.task)
     if e["status"] != "review": sys.exit(f"estado inválido: {e['status']} (se requiere review)")
-    if not fresh(e): sys.exit("un commit nuevo invalidó los checks: ejecute check de nuevo")
+    if not fresh(e): sys.exit("un commit o cambio nuevo invalidó los checks: ejecute check de nuevo")
     if a.reviewer == tasks()[a.task]["role"] or a.reviewer == e.get("developer"): sys.exit("el revisor debe ser un rol distinto al que desarrolló")
-    e["review"] = {"verdict": a.verdict, "reviewer": a.reviewer, "notes": a.notes, "head": head(), "at": time.strftime("%FT%T")}
+    e["review"] = {"verdict": a.verdict, "reviewer": a.reviewer, "notes": a.notes, "head": head(), "tree": tree(), "at": time.strftime("%FT%T")}
     if a.verdict != "ok": e["status"] = "running"
     save(s); print("revisión registrada:", a.verdict)
 
@@ -168,8 +204,9 @@ def cmd_close(a):
     if e["status"] != "review": sys.exit(f"estado inválido: {e['status']}")
     r = e.get("review")
     if not r or r["verdict"] != "ok": sys.exit("falta revisión con veredicto ok")
-    if r["head"] != head() or not fresh(e): sys.exit("un commit nuevo invalidó checks/revisión")
-    e["status"] = "accepted"; e["accepted_at"] = time.strftime("%FT%T"); e["accepted_head"] = head(); refresh_ready(s); save(s)
+    if r["head"] != head() or r.get("tree") != tree() or not fresh(e): sys.exit("un commit o cambio nuevo invalidó checks/revisión")
+    if dirty(): sys.exit("hay cambios sin commit: la aceptación debe quedar ligada a un commit definitivo")
+    e["status"] = "accepted"; e["accepted_at"] = time.strftime("%FT%T"); e["accepted_head"] = head(); e["accepted_tree"] = tree(); refresh_ready(s); save(s)
     print(f"{a.task} aceptada por la dirección")
 
 

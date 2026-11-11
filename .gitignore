@@ -5,3 +5,6 @@ __pycache__/
 node_modules/
 frontend/dist/
 harness/state.json
+.venv/
+.pytest_cache/
+.local-checks/

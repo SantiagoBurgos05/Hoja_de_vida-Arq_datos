@@ -26,7 +26,7 @@ Verificar una organización **no** acredita que el usuario estudió o trabajó a
 - Seguridad: Argon2id, sesiones opacas con hash en BD, límite de intentos, CORS restringido, autorización por propietario (404 si el recurso es ajeno), descargas con `nosniff`.
 - Usabilidad: autoguardado, estados visibles (guardado/sin conectar/conflicto), borradores siempre conservados, lenguaje claro en español.
 - Costo cero: Render free, Atlas M0, Supabase free, GitHub Pages (ver `limites-gratuitos.md`).
-- Privacidad: Gold sin datos personales (supresión k-anonimato, k ≥ 5).
+- Privacidad: Gold sin datos personales (supresión si la celda la aportan menos de k = 5 personas distintas).
 
 ## Fuera de alcance (declarado)
 - Autenticación de certificados ante la entidad emisora.

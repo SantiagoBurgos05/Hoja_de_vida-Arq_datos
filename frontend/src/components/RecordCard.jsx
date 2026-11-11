@@ -29,8 +29,12 @@ export default function RecordCard({ path, recordType, record, sourcesFor, rende
     const v = formRef.current;
     const body = Object.fromEntries(Object.entries(v).filter(([k]) => !SERVER_FIELDS.includes(k)));
     const saved = await api.put(`${path}/${record.id}`, { ...body, revision: v.revision });
-    setForm((f) => ({ ...f, revision: saved.revision, record_status: saved.record_status }));
-  }, [path, record.id]);
+    const server = { revision: saved.revision, record_status: saved.record_status,
+                     organization_status: saved.organization_status, organization_id: saved.organization_id };
+    formRef.current = { ...formRef.current, ...server };     // un guardado encadenado usa ya la revisión nueva
+    setForm((f) => ({ ...f, ...server }));
+    if (server.organization_status !== v.organization_status) onRefresh?.();   // p. ej. verificación invalidada
+  }, [path, record.id, onRefresh]);
 
   // Solo cambios de campos editables disparan el autoguardado (no los campos que gestiona el servidor).
   const editable = useMemo(() => JSON.stringify(Object.fromEntries(Object.entries(form).filter(([k]) => !SERVER_FIELDS.includes(k)))), [form]);

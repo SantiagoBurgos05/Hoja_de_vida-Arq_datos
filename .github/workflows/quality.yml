@@ -1,5 +1,6 @@
 name: quality
-on: [push, pull_request]
+# workflow_call: deploy-pages la reutiliza para publicar solo si las pruebas del MISMO commit pasan.
+on: [push, pull_request, workflow_call]
 jobs:
   backend:
     runs-on: ubuntu-latest

@@ -19,6 +19,14 @@
     {"id": "T-008", "title": "Frontend React + Vite", "feature": ["RF01", "RF02", "RF03", "RF04", "RF05", "RF06", "RF07"], "depends_on": ["T-005", "T-007"], "role": "desarrollo", "allowed_paths": ["frontend/", "tests_e2e/"],
      "acceptance": ["npm test", "npm run build", "E2E en navegador"], "checks": ["npm:test", "npm:build"]},
     {"id": "T-009", "title": "Despliegue (Docker, CI, guía)", "feature": [], "depends_on": ["T-008"], "role": "arquitectura", "allowed_paths": ["docker-compose.yml", "backend/Dockerfile", ".github/", "docs/despliegue.md"],
-     "acceptance": ["docker compose config válido", "workflows presentes", "pendientes de prueba en vivo declarados en docs/estado.md"], "checks": ["validate"]}
+     "acceptance": ["docker compose config válido", "workflows presentes", "pendientes de prueba en vivo declarados en docs/estado.md"], "checks": ["validate"]},
+    {"id": "T-010", "title": "Paso 1: recorrido local y preparación reproducible", "feature": ["RF01", "RF02", "RF06", "RF07"], "depends_on": [], "role": "desarrollo",
+     "allowed_paths": ["backend/Dockerfile", "backend/requirements-dev.txt", "backend/tests/", "frontend/.dockerignore", "scripts/", "tests_e2e/", "docs/", "README.md", ".gitignore"],
+     "acceptance": ["Suite completa del backend contra MongoDB real", "Pruebas y compilación del frontend", "Registro, edición, guardado, nueva sesión, soporte recuperable y exportación en navegador con fuente simulada", "Construir contenedores y comprobar escritura y persistencia del volumen con usuario no root", "Evidencias actuales separadas de resultados históricos; aceptación humana antes del paso 2"],
+     "checks": ["validate", "pytest:backend/tests", "npm:test", "npm:build", "local:e2e", "docker:smoke"]},
+    {"id": "T-011", "title": "Paso 2: persistencia y consistencia", "feature": ["RF02", "RF04", "RF06", "RF08", "RF09"], "depends_on": ["T-010"], "role": "desarrollo",
+     "allowed_paths": ["backend/app/", "backend/tests/", "frontend/src/", "frontend/tests/", "tests_e2e/", "scripts/harness.py", ".github/", "render.yaml", "docs/"],
+     "acceptance": ["Cambiar de sección antes del autoguardado no pierde cambios; guardados serializados; se guarda antes de exportar y salir", "Silver sincronizado con creación, modificación y eliminación; Gold no cuenta registros eliminados", "Umbral Gold por personas distintas", "Cambiar tipo_entidad invalida la verificación; con soportes responde 409", "Idempotencia de soportes por operación completa (archivo + registro)", "/api/health devuelve 503 si MongoDB falla", "Pages publica solo si quality pasa en el mismo commit", "Vigencia del harness por commit y huella del contenido"],
+     "checks": ["validate", "pytest:backend/tests", "npm:test", "npm:build", "local:e2e"]}
   ]
 }
