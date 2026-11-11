@@ -1,7 +1,9 @@
 from __future__ import annotations
 from fastapi import APIRouter, Header, Request
 from pydantic import BaseModel, EmailStr, field_validator
+from ...core.config import get_settings
 from ...core.deps import CurrentUser
+from ...core.ratelimit import client_ip, enforce
 from . import service
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -20,14 +22,14 @@ class Credentials(BaseModel):
 
 
 @router.post("/register", status_code=201)
-def register(c: Credentials):
+def register(c: Credentials, request: Request):
+    enforce("register", client_ip(request), get_settings().rate_register)
     return service.register(c.email, c.password)
 
 
 @router.post("/login")
 def login(c: Credentials, request: Request):
-    ip = request.client.host if request.client else "?"
-    return service.login(c.email, c.password, ip)
+    return service.login(c.email, c.password, client_ip(request))
 
 
 @router.post("/logout", status_code=204)

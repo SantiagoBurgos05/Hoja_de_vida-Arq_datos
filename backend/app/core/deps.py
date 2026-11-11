@@ -1,7 +1,9 @@
 from __future__ import annotations
 from datetime import datetime, timezone
 from bson import ObjectId
+import hmac
 from fastapi import Depends, Header, HTTPException
+from .config import get_settings
 from .db import get_db
 from .security import token_hash
 
@@ -32,4 +34,12 @@ def audit(user_id, event: str, **data) -> None:
     get_db().audit_events.insert_one({"user_id": user_id, "event": event, "data": data, "at": datetime.now(timezone.utc)})
 
 
+def require_admin(x_admin_token: str | None = Header(default=None)) -> None:
+    """Operaciones de administración: requieren ADMIN_TOKEN configurado (vacío = desactivadas)."""
+    tok = get_settings().admin_token
+    if not tok or not x_admin_token or not hmac.compare_digest(x_admin_token, tok):
+        raise HTTPException(403, "No autorizado")
+
+
 CurrentUser = Depends(current_user)
+AdminOnly = Depends(require_admin)

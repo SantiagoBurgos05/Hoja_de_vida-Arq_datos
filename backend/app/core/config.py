@@ -29,6 +29,14 @@ class Settings:
     admin_token: str = field(default_factory=lambda: os.getenv("ADMIN_TOKEN", ""))
     temp_retention_days: int = 30
     gold_k_anonymity: int = 5
+    # Protección de recursos (plan gratuito: Supabase 1 GB, Atlas 0,5 GB)
+    user_storage_quota_bytes: int = field(default_factory=lambda: int(float(os.getenv("USER_STORAGE_QUOTA_MB", "25")) * 1024 * 1024))
+    stale_upload_minutes: int = field(default_factory=lambda: int(os.getenv("STALE_UPLOAD_MINUTES", "60")))
+    trust_proxy: bool = field(default_factory=lambda: _bool("TRUST_PROXY", False))   # Render: X-Forwarded-For
+    # Límites de uso: (máximo de eventos, ventana en segundos)
+    rate_register: tuple = (10, 3600)      # registros por IP
+    rate_lookup: tuple = (60, 600)         # búsquedas + verificaciones por usuario (consultan fuentes externas)
+    rate_upload: tuple = (30, 3600)        # cargas por usuario
 
 
 _settings: Settings | None = None

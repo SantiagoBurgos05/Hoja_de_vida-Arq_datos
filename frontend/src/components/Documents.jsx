@@ -8,6 +8,7 @@ export default function Documents({ recordType, recordId, orgStatus, onChanged }
   const [docs, setDocs] = useState([]);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [usage, setUsage] = useState(null);
   const input = useRef();
   const enabled = orgStatus === "verified";
 
@@ -15,6 +16,9 @@ export default function Documents({ recordType, recordId, orgStatus, onChanged }
     try { setDocs(await api.get(`/api/documents?record_type=${recordType}&record_id=${recordId}`)); } catch (e) { setErr(e.message); }
   }, [recordType, recordId]);
   useEffect(() => { load(); }, [load]);
+  // Espacio usado frente a la cuota del usuario (solo donde se puede cargar).
+  const loadUsage = useCallback(() => api.get("/api/documents/usage").then(setUsage).catch(() => setUsage(null)), []);
+  useEffect(() => { if (enabled) loadUsage(); }, [enabled, loadUsage]);
 
   async function upload(file) {
     const bad = checkFile(file);
@@ -24,13 +28,13 @@ export default function Documents({ recordType, recordId, orgStatus, onChanged }
     form.append("record_type", recordType); form.append("record_id", recordId); form.append("file", file);
     try {
       await request("POST", "/api/documents", { form, headers: { "Idempotency-Key": crypto.randomUUID() } });
-      await load(); onChanged?.();
+      await load(); loadUsage(); onChanged?.();
     } catch (e) { setErr(e.message); } finally { setBusy(false); if (input.current) input.current.value = ""; }
   }
   async function remove(id) {
     if (!window.confirm("¿Eliminar este soporte? Se borra también el archivo almacenado.")) return;
     setBusy(true); setErr("");
-    try { await api.del(`/api/documents/${id}`); await load(); onChanged?.(); } catch (e) { setErr(e.message); } finally { setBusy(false); }
+    try { await api.del(`/api/documents/${id}`); await load(); loadUsage(); onChanged?.(); } catch (e) { setErr(e.message); } finally { setBusy(false); }
   }
 
   return (
@@ -50,7 +54,7 @@ export default function Documents({ recordType, recordId, orgStatus, onChanged }
       </ul>
       <input ref={input} type="file" accept="application/pdf,image/jpeg,image/png" disabled={!enabled || busy}
              onChange={(e) => e.target.files[0] && upload(e.target.files[0])} aria-label="Cargar certificado (PDF, JPG o PNG hasta 5 MB)" />
-      <small className="muted"> PDF, JPG o PNG · máx. 5 MB</small>
+      <small className="muted"> PDF, JPG o PNG · máx. 5 MB{usage ? ` · espacio usado ${fmtBytes(usage.used_bytes)} de ${fmtBytes(usage.quota_bytes)}` : ""}</small>
       {err && <p className="banner bad" role="alert">{err}</p>}
     </div>
   );

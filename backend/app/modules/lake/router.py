@@ -2,7 +2,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Header, HTTPException
 from ...core.config import get_settings
 from ...core.db import get_db
-from ...core.deps import CurrentUser, oid
+from ...core.deps import AdminOnly, CurrentUser, oid
 from . import service
 
 router = APIRouter(prefix="/api/lake", tags=["lake"])
@@ -39,10 +39,7 @@ def gold(user=CurrentUser):
             for g in get_db().gold_metrics.find({}).sort([("metric", 1), ("dimension", 1)])]
 
 
-@router.post("/build-gold")
-def build_gold(x_admin_token: str | None = Header(default=None)):
+@router.post("/build-gold", dependencies=[AdminOnly])
+def build_gold():
     """Operación de administración: requiere ADMIN_TOKEN configurado (desactivada si está vacío)."""
-    tok = get_settings().admin_token
-    if not tok or x_admin_token != tok:
-        raise HTTPException(403, "No autorizado")
     return service.build_gold()

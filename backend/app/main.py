@@ -11,6 +11,7 @@ from .modules.organizations.router import router as organizations
 from .modules.documents.router import router as documents
 from .modules.lake.router import router as lake
 from .modules.export.router import router as export
+from .modules.admin.router import router as admin
 
 
 @asynccontextmanager
@@ -44,7 +45,7 @@ def create_app() -> FastAPI:
         except Exception:
             return JSONResponse({"status": "degraded", "db": "error"}, status_code=503)
 
-    for r in (identity, resume, organizations, documents, lake, export):
+    for r in (identity, resume, organizations, documents, lake, export, admin):
         app.include_router(r)
     return app
 

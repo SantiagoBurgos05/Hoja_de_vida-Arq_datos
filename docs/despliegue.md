@@ -7,8 +7,8 @@
 3. **Supabase**: cree un proyecto, un bucket **privado** `certificados` y copie `SUPABASE_URL` y la *service key* (solo al backend).
 4. **Render**: Web Service desde `render.yaml` (Docker, plan free). Variables según `.env.example`. `CORS_ORIGINS` = URL de Pages. Se duerme a los 15 min; el frontend lo tolera con reintentos y aviso. `healthCheckPath` responde 503 si MongoDB no está disponible.
 5. **GitHub Pages**: Settings → Pages → Source: *GitHub Actions*; defina la variable de repositorio `VITE_API_URL` con la URL de Render. `pages.yml` publica `frontend/dist`. Verifique si su plan permite Pages en repositorios privados.
-6. **Gold**: `POST /api/lake/build-gold` con `X-Admin-Token`. `render.yaml` genera `ADMIN_TOKEN` (`generateValue`); consúltelo en el panel de Render. No hay aún una ejecución programada de Gold.
-7. **Retención**: ejecute periódicamente `python -c "from app.modules.documents.service import cleanup_stale; print(cleanup_stale())"` (Render cron no es gratuito; puede ser manual o un workflow programado).
+6. **Mantenimiento (Gold, recuperación y retención)**: `render.yaml` genera `ADMIN_TOKEN` (`generateValue`); cópielo del panel de Render. En GitHub defina la variable de repositorio `API_URL` (URL de Render) y el secreto `ADMIN_TOKEN` (mismo valor). `.github/workflows/maintenance.yml` llama a diario a `POST /api/admin/maintenance` (también se puede lanzar a mano desde Actions). Sin esas dos variables el workflow termina con un aviso y no hace nada. Alternativa por consola: `cd backend && python -m app.maintenance`.
+7. **Protección de recursos**: `TRUST_PROXY=true` en Render para que los límites por IP usen la IP real; `USER_STORAGE_QUOTA_MB` (25 MB por defecto) limita el espacio de soportes por usuario. Con 1 GB de Supabase, 25 MB por usuario cubre unas 40 personas al tope; ajuste según el uso real.
 8. Antes de usar fuentes reales: confirme columnas de los datasets y ajuste `field_map` (`connectors/registry.py`).
 
 ## Local

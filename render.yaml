@@ -14,4 +14,6 @@ services:
       - {key: SUPABASE_URL, sync: false}
       - {key: SUPABASE_SERVICE_KEY, sync: false}
       - {key: SUPABASE_BUCKET, value: certificados}
+      - {key: TRUST_PROXY, value: "true"}        # IP real del cliente desde X-Forwarded-For (límites de uso)
+      - {key: USER_STORAGE_QUOTA_MB, value: "25"}
       - {key: ADMIN_TOKEN, generateValue: true}   # necesario para POST /api/lake/build-gold (vacío = desactivado)

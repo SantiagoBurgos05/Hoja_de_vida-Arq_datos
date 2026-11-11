@@ -42,6 +42,9 @@ def init_db(db: Database | None = None) -> None:
     db.sessions.create_index("expires_at", expireAfterSeconds=0)            # TTL
     db.login_attempts.create_index("at", expireAfterSeconds=3600)           # TTL
     db.login_attempts.create_index("key")
+    db.rate_events.create_index("at", expireAfterSeconds=86400)              # TTL: ventanas de hasta 24 h
+    db.rate_events.create_index([("key", ASCENDING), ("at", ASCENDING)])
+    db.maintenance_runs.create_index("started_at")
     db.resumes.create_index("user_id", unique=True)                         # 1 hoja de vida por usuario
     for c in ("education_records", "work_records"):
         db[c].create_index([("user_id", ASCENDING), ("resume_id", ASCENDING)])

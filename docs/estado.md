@@ -2,7 +2,13 @@
 
 Fuente de verdad: lo que NO está en «Probado» no debe presentarse como hecho.
 
-## Revisión actual: paso 3 (2026-11-10, Windows)
+## Revisión actual: paso 4 (2026-11-10, Windows)
+
+- Mantenimiento operativo: `POST /api/admin/maintenance` (y `python -m app.maintenance`) expira cargas interrumpidas, completa borrados pendientes, aplica la retención, concilia Silver y reconstruye Gold; registra cada ejecución. Workflow diario `maintenance.yml` escrito, **no ejecutado en GitHub**.
+- Cuota de soportes por usuario (25 MB, 413) con `GET /api/documents/usage` visible en la interfaz; límites de uso en registro, consultas a fuentes y cargas (429).
+- Backend: **125 pruebas aprobadas**; frontend 13 y compilación; E2E 15. Sin revisión ni aceptación humana (T-013). Detalle: [paso-04-operacion.md](paso-04-operacion.md).
+
+## Revisión anterior: paso 3 (2026-11-10, Windows)
 
 - Fuentes educativas **consultadas en vivo** en datos.gov.co: SNIES (`n5yy-8nav`), SIET (`gpje-sixt`) y establecimientos (`cfw5-qzt5`). Las columnas supuestas de SNIES y establecimientos eran incorrectas y se corrigieron; establecimientos repite cada colegio por año y ahora se usa el año más reciente.
 - `scripts/check_sources.py` en vivo: búsqueda, verificación por identificador e identificador inexistente correctos en las tres fuentes. Recorrido por la API con SNIES real: verificación de la entidad y carga de un certificado sintético correctas.
@@ -49,6 +55,6 @@ Detalle, límites y comandos: [paso-01-local.md](paso-01-local.md). Los resultad
 - **RUES y SIGEP**: deshabilitados. No se halló API ni dato abierto oficial verificado; no se hace scraping. Requiere decisión sobre un canal autorizado.
 - **DUE / Buscando Colegio**: se usa el dataset de establecimientos educativos como aproximación; no confirmado como el mismo origen.
 - Plantilla: solo 5 filas de educación superior y 2 de idiomas (se advierte; el excedente no se imprime).
-- No hay recuperación de contraseña, verificación de correo, ni limitación de tasa global por IP.
+- No hay recuperación de contraseña ni verificación de correo. Hay límites de uso en registro, consultas a fuentes y cargas (paso 4), no un límite global para todas las rutas.
 - No se valida la autenticidad de certificados (fuera de alcance, declarado en la UI).
 - La evidencia histórica corresponde a T-001. La revisión actual añade T-010 para el paso 1, sin aceptar tareas anteriores. El estado local previo del harness no estaba presente en esta copia; no se reconstruyen aceptaciones a partir de documentación histórica. La revisión final y aceptación siguen pendientes. No se ha publicado ni desplegado durante esta revisión.

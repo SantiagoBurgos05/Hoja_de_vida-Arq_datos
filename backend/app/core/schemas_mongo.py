@@ -85,4 +85,6 @@ VALIDATORS: dict[str, dict] = {
     },
     "audit_events": {"bsonType": "object", "required": ["event", "at"]},
     "login_attempts": {"bsonType": "object", "required": ["key", "at"]},
+    "rate_events": {"bsonType": "object", "required": ["key", "at"]},
+    "maintenance_runs": {"bsonType": "object", "required": ["started_at", "trigger", "ok"]},
 }

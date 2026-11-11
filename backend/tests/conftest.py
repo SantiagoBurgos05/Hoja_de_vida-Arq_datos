@@ -23,7 +23,10 @@ def client(tmp_storage):
     from app.core import config, db as dbmod, storage
     name = f"hv_test_{uuid.uuid4().hex[:8]}"
     config.set_settings(config.Settings(mongo_uri=TEST_URI, mongo_db=name, local_storage_dir=tmp_storage,
-                                        admin_token="test-admin", login_max_attempts=5))
+                                        admin_token="test-admin", login_max_attempts=5,
+                                        # las pruebas crean cientos de usuarios desde la misma IP: límites altos por defecto;
+                                        # test_limites.py los baja para comprobarlos
+                                        rate_register=(100000, 3600), rate_lookup=(100000, 600), rate_upload=(100000, 3600)))
     storage.set_storage(None)
     dbmod.close_client()
     from app.main import create_app

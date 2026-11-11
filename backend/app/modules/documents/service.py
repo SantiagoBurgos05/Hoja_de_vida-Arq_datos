@@ -90,6 +90,12 @@ def upload(user_id, record_type: str, record_id: ObjectId, filename: str | None,
     if dup:
         return dup, "duplicate"
 
+    # Cuota por usuario (después de idempotencia/duplicado: esos casos no ocupan espacio nuevo).
+    # Sin bloqueo: dos cargas simultáneas pueden excederla en un archivo como máximo.
+    if used_bytes(user_id) + len(data) > s.user_storage_quota_bytes:
+        raise bad("cuota_excedida", f"Superaría su espacio para soportes ({s.user_storage_quota_bytes // (1024 * 1024)} MB). "
+                                    "Elimine soportes que ya no necesite.", 413)
+
     doc_id = ObjectId()
     ext = ALLOWED[real]
     key = f"bronze/{user_id}/certificates/{doc_id}.{ext}"       # la clave no contiene nombre de archivo del usuario
@@ -169,20 +175,73 @@ def list_docs(user_id, record_type: str | None, record_id: ObjectId | None) -> l
     return list(get_db().documents.find(q).sort("created_at", 1))
 
 
+def _finish_delete(d: dict) -> None:
+    """Pasos posteriores al borrado en Storage: catálogo (tombstone), metadatos y estado del registro."""
+    if d.get("lake_object_id"):
+        lake.bronze_tombstone(d["lake_object_id"])
+    get_db().documents.delete_one({"_id": d["_id"]})
+    if d["record_type"] != "education_basic":
+        resume.refresh_status(d["user_id"], d["record_type"], d["record_id"])
+
+
 def delete(user_id, doc_id: ObjectId) -> None:
     db = get_db()
     d = get_owned(user_id, doc_id)
-    db.documents.update_one({"_id": doc_id}, {"$set": {"document_status": "delete_pending"}})
+    db.documents.update_one({"_id": doc_id}, {"$set": {"document_status": "delete_pending", "delete_requested_at": _now()}})
     try:
         if d.get("storage_key"):
             get_storage().delete(d["storage_key"])
     except Exception:
         raise HTTPException(502, {"code": "borrado_pendiente", "message": "No se pudo eliminar el archivo; quedó pendiente y puede reintentar."})
-    if d.get("lake_object_id"):
-        lake.bronze_tombstone(d["lake_object_id"])
-    db.documents.delete_one({"_id": doc_id})
-    if d["record_type"] != "education_basic":
-        resume.refresh_status(user_id, d["record_type"], d["record_id"])
+    _finish_delete(d)
+
+
+def retry_pending_deletes() -> dict:
+    """Mantenimiento: completa los borrados que quedaron en `delete_pending` porque Storage falló."""
+    done = failed = 0
+    for d in get_db().documents.find({"document_status": "delete_pending"}):
+        try:
+            if d.get("storage_key"):
+                get_storage().delete(d["storage_key"])      # idempotente: un objeto ya ausente no es error
+        except Exception:
+            failed += 1
+            continue
+        _finish_delete(d)
+        done += 1
+    return {"completed": done, "still_pending": failed}
+
+
+def expire_stale_uploads(older_than_minutes: float | None = None) -> dict:
+    """Mantenimiento: una carga que lleva demasiado tiempo en `uploading` (proceso interrumpido) pasa a `rejected`,
+    se borra su objeto y se libera su clave de idempotencia. Nunca queda `ready` sin haberse comprobado."""
+    mins = get_settings().stale_upload_minutes if older_than_minutes is None else older_than_minutes
+    cutoff = _now() - timedelta(minutes=mins)
+    db, n = get_db(), 0
+    for d in db.documents.find({"document_status": "uploading", "created_at": {"$lt": cutoff}}):
+        try:
+            if d.get("storage_key"):
+                get_storage().delete(d["storage_key"])
+        except Exception:
+            pass                                          # cleanup_stale lo reintenta después
+        db.documents.update_one({"_id": d["_id"], "document_status": "uploading"},
+                                {"$set": {"document_status": "rejected", "reason": "carga interrumpida", "rejected_at": _now()},
+                                 "$unset": {"idempotency_key": ""}})
+        n += 1
+    return {"expired": n}
+
+
+QUOTA_STATUSES = ["uploading", "ready", "delete_pending"]
+
+
+def used_bytes(user_id) -> int:
+    agg = list(get_db().documents.aggregate([{"$match": {"user_id": user_id, "document_status": {"$in": QUOTA_STATUSES}}},
+                                             {"$group": {"_id": None, "total": {"$sum": "$size"}}}]))
+    return int(agg[0]["total"]) if agg else 0
+
+
+def usage(user_id) -> dict:
+    used, quota = used_bytes(user_id), get_settings().user_storage_quota_bytes
+    return {"used_bytes": used, "quota_bytes": quota, "available_bytes": max(quota - used, 0)}
 
 
 def delete_for_record(user_id, record_type: str, record_id: ObjectId) -> None:

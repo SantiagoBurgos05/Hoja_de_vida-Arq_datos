@@ -3,6 +3,7 @@ from typing import Literal, Optional
 from fastapi import APIRouter, File, Form, Header, Response, UploadFile
 from ...core.config import get_settings
 from ...core.deps import CurrentUser, oid
+from ...core.ratelimit import enforce
 from ...core.errors import bad
 from . import service
 
@@ -13,6 +14,7 @@ router = APIRouter(prefix="/api/documents", tags=["documents"])
 def upload(response: Response, record_type: Literal["education_basic", "education_higher", "work"] = Form(...),
            record_id: str = Form(...), file: UploadFile = File(...),
            idempotency_key: Optional[str] = Header(default=None, alias="Idempotency-Key"), user=CurrentUser):
+    enforce("upload", str(user["_id"]), get_settings().rate_upload)
     max_b = get_settings().max_upload_bytes
     data = file.file.read(max_b + 1)           # nunca se lee más de 5 MB + 1 byte
     if idempotency_key is not None and not (8 <= len(idempotency_key) <= 80):
@@ -27,6 +29,12 @@ def upload(response: Response, record_type: Literal["education_basic", "educatio
 def list_documents(record_type: Optional[Literal["education_basic", "education_higher", "work"]] = None,
                    record_id: Optional[str] = None, user=CurrentUser):
     return [service.public(d) for d in service.list_docs(user["_id"], record_type, oid(record_id) if record_id else None)]
+
+
+@router.get("/usage")
+def usage(user=CurrentUser):
+    """Espacio usado por los soportes del usuario frente a su cuota."""
+    return service.usage(user["_id"])
 
 
 @router.get("/{doc_id}/download")
