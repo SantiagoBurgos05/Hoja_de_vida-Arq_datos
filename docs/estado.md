@@ -1,8 +1,19 @@
-# Estado real del proyecto (2026-11-10)
+# Estado real del proyecto (2026-11-11)
 
 Fuente de verdad: lo que NO está en «Probado» no debe presentarse como hecho.
 
-## Revisión actual: paso 4 (2026-11-10, Windows)
+## Revisión actual: paso 5 en curso — MongoDB Atlas (2026-11-11)
+
+- **Atlas M0 probado en vivo** con `scripts/check_atlas.py` desde el PC local (MongoDB 8.0.37, host `hv-cluster.zkltgmq.mongodb.net`): conexión, `init_db` (colecciones con `$jsonSchema` e índices), `init_db` repetido (`collMod`, permiso `dbAdmin`), validador que rechaza un documento inválido, índices único/parcial/TTL, y escritura y borrado de un evento sintético: **todo correcto**.
+- Acceso de red limitado por ahora a la IP del PC; falta habilitar el acceso de Render.
+- **Supabase Storage probado en vivo** con `scripts/check_supabase.py` (bucket `certificados` privado, clave secreta de servicio): carga, tamaño, descarga idéntica, acceso sin credenciales denegado y borrado: **correctos**. Hallazgos: (1) una `SUPABASE_URL` copiada de la Data API (`…/rest/v1/`) rompía todas las rutas: el adaptador ahora usa solo esquema y host; (2) el bucket restringido a PDF/JPG/PNG **rechaza la evidencia JSON** de las verificaciones de entidades, lo que hacía fallar la verificación con HTTP 500: ahora responde `organization_status = error` sin conceder verificación, y el script lo comprueba. Se desactivó la restricción de tipos del bucket y el script pasó completo, incluida la evidencia JSON. **Recorrido por la API** (Mongo local temporal, SNIES real, Supabase real, usuario y certificado sintéticos): verificación de UNIMINUTO (2829) → carga `ready` en Supabase → descarga idéntica → borrado coordinado (objeto ausente): **correcto**. Los objetos de prueba se eliminaron del bucket.
+- **Render desplegado** (`https://hoja-de-vida-api-eeal.onrender.com`, Docker, plan free) y comprobado con `scripts/check_deploy.py` el 2026-11-11: `/api/health` 200 con Atlas conectado, cabeceras de seguridad, 401 sin sesión y 403 sin token de administración: **correctos**. **CORS falló**: `CORS_ORIGINS` se configuró con mayúsculas y los navegadores envían el origen en minúsculas, así que la página de Pages quedaría bloqueada. Se corrigió la variable a minúsculas y la API ahora normaliza los orígenes (cambio de código pendiente de desplegar). **Segunda ejecución: todo correcto** — CORS permite `https://santiagoburgos05.github.io` y rechaza un origen ajeno; `POST /api/admin/maintenance` en Render completó todos sus pasos (Atlas, Supabase y Gold).
+- **GitHub Actions** sobre `dec5687`: `quality` (backend con Mongo de servicio + frontend) **aprobado** en GitHub. `deploy-pages` falló primero porque la rama por defecto era `paso-02-consistencia` y el entorno `github-pages` solo permitía esa rama; se cambió la rama por defecto a `main`, se permitió `main` en el entorno y el workflow quedó **aprobado**.
+- **GitHub Pages publicado**: `https://santiagoburgos05.github.io/Hoja_de_vida-Arq_datos/` responde 200, el JavaScript publicado apunta a `https://hoja-de-vida-api-eeal.onrender.com` (no a `localhost`) y la pantalla de acceso carga sin errores de consola (2026-11-11).
+- **Pendiente (paso 6)**: recorrido completo por una persona en la URL pública (registro, datos, nueva sesión, verificación SNIES, certificado, descarga en otro navegador, exportación). Workflow `maintenance` en GitHub: sin confirmar. Las correcciones posteriores a `dec5687` no están desplegadas.
+- Además: el check del harness ya no registra un intento cuando MongoDB no responde, y sus propios archivos no cuentan como cambios sin commit. `check T-010` pasó completo (incluido `docker:smoke`) sobre `dec5687` con cambios sin commit.
+
+## Revisión anterior: paso 4 (2026-11-10, Windows)
 
 - Mantenimiento operativo: `POST /api/admin/maintenance` (y `python -m app.maintenance`) expira cargas interrumpidas, completa borrados pendientes, aplica la retención, concilia Silver y reconstruye Gold; registra cada ejecución. Workflow diario `maintenance.yml` escrito, **no ejecutado en GitHub**.
 - Cuota de soportes por usuario (25 MB, 413) con `GET /api/documents/usage` visible en la interfaz; límites de uso en registro, consultas a fuentes y cargas (429).
@@ -45,8 +56,8 @@ Detalle, límites y comandos: [paso-01-local.md](paso-01-local.md). Los resultad
 
 ## Implementado pero NO probado en vivo
 - ~~Consultas a fuentes oficiales~~: resuelto en el paso 3 (consultadas en vivo, columnas confirmadas). La suite automatizada sigue usando respuestas simuladas; la consulta en vivo es `scripts/check_sources.py`.
-- **Supabase Storage** (`SupabaseStorage`): escrito según la API REST documentada; sin proyecto real para probarlo.
-- **MongoDB Atlas**: no probado; la validación `$jsonSchema` en M0 no se confirmó. Se prueba con Mongo 7 local. El índice parcial con `$in` requiere Mongo ≥ 6.
+- **Supabase Storage**: probado en vivo desde el PC el 2026-11-11 (ver revisión actual); **no** probado todavía desde Render.
+- **MongoDB Atlas**: probado desde el PC local el 2026-11-11 (M0, MongoDB 8.0.37): `$jsonSchema`, `collMod` e índices funcionan. **No** probado todavía desde Render ni con carga real.
 - **Render, GitHub Pages, GitHub Actions**: archivos escritos, nunca ejecutados. Docker en Render free no se verificó.
 - **Imágenes Docker / `docker compose up`**: no se construyeron (sin demonio Docker); solo se validó la sintaxis.
 - Pruebas visuales de la UI en móvil y accesibilidad con lector de pantalla: no realizadas.
