@@ -28,7 +28,7 @@ with sync_playwright() as pw:
     page.get_by_role("button", name="Crear una cuenta").click()
     page.get_by_label("Correo electrónico").fill(EMAIL); page.get_by_label("Contraseña (mínimo 10 caracteres)").fill(PW)
     page.get_by_role("button", name="Crear cuenta").click()
-    expect(page.get_by_text("1 · Datos personales").first).to_be_visible(); ok("registro e inicio de sesión")
+    expect(page.get_by_role("link", name="1 · Datos personales")).to_be_visible(); ok("registro e inicio de sesión")
     page.get_by_label("Primer apellido").fill("Prueba"); page.get_by_label("Nombres").fill("Ana Maria"); page.get_by_label("Número", exact=True).fill("1000000000")
     expect(page.get_by_text("Guardado", exact=True).filter(visible=True).first).to_be_visible(timeout=8000); ok("autoguardado de datos personales")
     page.screenshot(path=str(OUT / "01_personales.png"), full_page=True)

@@ -24,5 +24,5 @@ describe("format", () => {
     expect(recordLabel("supported")).toBe("Con soporte adjunto");
     expect(recordLabel("draft")).toBe("Borrador");
   });
-  it("fmtBytes", () => { expect(fmtBytes(2048)).toBe("2 KB"); expect(fmtBytes(2 * 1048576)).toBe("2.0 MB"); });
+  it("fmtBytes", () => { expect(fmtBytes(2048)).toBe("2 KB"); expect(fmtBytes(2 * 1048576)).toBe("2.0 MB"); expect(fmtBytes(0)).toBe("0 KB"); expect(fmtBytes(10)).toBe("1 KB"); });
 });

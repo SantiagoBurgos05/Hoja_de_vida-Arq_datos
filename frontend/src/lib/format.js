@@ -25,7 +25,7 @@ export function orgLabel(status) {
 export function recordLabel(status) {
   return ({ draft: "Borrador", declared: "Antecedente declarado", supported: "Con soporte adjunto" })[status] || "Borrador";
 }
-export const fmtBytes = (n) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
+export const fmtBytes = (n) => (!n ? "0 KB" : n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 export const MAX_UPLOAD = 5 * 1024 * 1024;
 export function checkFile(file) {
   if (!file) return "Seleccione un archivo.";

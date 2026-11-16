@@ -2,7 +2,13 @@
 
 Fuente de verdad: lo que NO está en «Probado» no debe presentarse como hecho.
 
-## Revisión actual: revisión independiente de T-010 a T-014 (2026-11-11)
+## Revisión actual: rediseño de la interfaz (2026-11-16)
+
+- Nueva interfaz con la identidad visual de la documentación (azul marino, índigo y verde azulado), modo claro y oscuro, y diseño responsivo (escritorio y móvil).
+- Mejoras de experiencia de usuario: acceso en dos paneles con mostrar u ocultar contraseña y medidor de longitud; indicador de pasos con el avance de cada sección; tarjetas temáticas; estados vacíos con guía; selectores de nivel R/B/MB para idiomas; verificador en pasos (fuente, búsqueda y candidatos) con ficha de la entidad verificada; zona de arrastrar y soltar para certificados con barra de cuota; confirmaciones dentro de la tarjeta en lugar de ventanas emergentes; lista de verificación antes de exportar.
+- Sin cambios en la API ni en los datos. Frontend: 13 pruebas y compilación correctas; E2E: 15 comprobaciones correctas (se actualizó la comprobación del inicio de sesión al nuevo indicador de pasos). Revisión visual en escritorio y móvil, claro y oscuro, sin errores de consola. **No desplegado** hasta hacer commit y push.
+
+## Revisión anterior: revisión independiente de T-010 a T-014 (2026-11-11)
 
 - Un agente revisor distinto al de desarrollo revisó el diff `03c5ff5..4192624`: **ok** en T-010, T-011, T-012 y T-014; **changes** en T-013 por un defecto de seguridad: la IP se tomaba del **primer** valor de `X-Forwarded-For`, que el cliente puede falsificar, lo que permitía evadir el límite de registro y el bloqueo de intentos de login.
 - Corregido: la IP se cuenta desde la derecha (`TRUSTED_PROXY_HOPS`), con pruebas de cabecera falsificada en registro y login. Notas menores también corregidas: búsqueda por NIT de 8 dígitos con DV; un fallo de Silver ya no convierte un guardado correcto en HTTP 500 (queda un evento `silver_sync_fallida` y el mantenimiento concilia); secciones desactualizadas de este archivo.
