@@ -43,6 +43,8 @@ VALIDATORS: dict[str, dict] = {
         "properties": {
             "record_status": {"enum": RECORD_STATUS},
             "organization_status": {"enum": ORG_STATUS},
+            "program_status": {"enum": ORG_STATUS},
+            "program": {"bsonType": ["object", "null"]},
         },
     },
     "work_records": {

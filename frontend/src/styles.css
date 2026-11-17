@@ -224,6 +224,10 @@ details.finder[open] > summary { background: var(--primary-soft); border-color: 
 .candidates li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); flex-wrap: wrap; transition: border-color .15s; }
 .candidates li:hover { border-color: var(--primary); }
 .candidates li strong { display: block; font-size: 14.5px; }
+.program-step { margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--line-strong); }
+.check { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--muted); cursor: pointer; }
+.check input { width: 18px; height: 18px; min-height: 0; accent-color: var(--primary); }
+.chip-btn { align-self: flex-start; margin-top: 4px; white-space: normal; text-align: left; }
 .candidates li span { font-size: 12.5px; color: var(--muted); }
 
 /* soportes */

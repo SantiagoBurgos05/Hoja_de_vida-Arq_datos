@@ -54,6 +54,14 @@ with sync_playwright() as pw:
     rec.locator("ul.candidates li").first.get_by_role("button", name="Verificar esta").click()
     expect(rec.get_by_text("Entidad verificada en fuente oficial")).to_be_visible(timeout=8000); ok("verificación por identificador oficial en el backend")
     expect(rec.get_by_text("No acredita", exact=False).first).to_be_visible()
+    # programa dentro de la institución verificada: la búsqueda se precarga con el nombre del estudio
+    rec.get_by_text("Buscar programa en esta institución").click()
+    expect(rec.get_by_label("Programa", exact=True)).to_have_value("Ingeniería de Sistemas")
+    rec.get_by_role("button", name="Buscar programa").click()
+    expect(rec.locator("ul.candidates.programs li")).to_have_count(1, timeout=8000)          # solo el nivel universitario que coincide
+    rec.get_by_role("button", name="Verificar este programa").click()
+    expect(rec.get_by_text("Programa verificado en la fuente oficial")).to_be_visible(timeout=8000)
+    ok("programa académico verificado dentro de la institución (nivel según la modalidad)")
     expect(rec.locator("input[type=file]")).to_be_enabled()
     rec.locator("input[type=file]").set_input_files(str(PDF_PATH))
     expect(rec.get_by_text("certificado_sintetico.pdf")).to_be_visible(timeout=8000)

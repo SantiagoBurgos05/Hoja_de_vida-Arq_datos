@@ -22,6 +22,15 @@ export function orgLabel(status) {
     error: "No se pudo consultar la fuente (borrador conservado)",
   })[status] || "Entidad sin verificar";
 }
+// Estado del programa académico (solo estudios superiores). Verificar el programa NO acredita que se haya cursado.
+export function programLabel(status) {
+  return ({
+    verified: "Programa verificado en la fuente oficial",
+    pending: "Programa sin verificar",
+    not_found: "Programa no encontrado en la fuente oficial",
+    error: "No se pudo consultar el programa (borrador conservado)",
+  })[status] || "Programa sin verificar";
+}
 export function recordLabel(status) {
   return ({ draft: "Borrador", declared: "Antecedente declarado", supported: "Con soporte adjunto" })[status] || "Borrador";
 }

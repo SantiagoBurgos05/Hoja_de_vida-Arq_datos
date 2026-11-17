@@ -63,6 +63,28 @@ def main() -> int:
             item["ok"], item["error"] = False, str(e)
             print(f"FALLA {source:6} {e}")
         report.append(item)
+    # ---- programas académicos: búsqueda combinada institución + programa y verificación exacta
+    from app.modules.organizations.connectors.programs import make_program_catalog
+    for source, inst_q, prog_q, modalidad in (("snies", "sena", "analisis desarrollo software", "TL"),
+                                             ("siet", "politecnico", "sistemas", None)):
+        cat = make_program_catalog(source)
+        item = {"source": f"{source}:programas", "dataset": cat.dataset, "query": f"{inst_q} + {prog_q}"}
+        try:
+            cands = cat.search_programs(institution_query=inst_q, program_query=prog_q, modalidad=modalidad)
+            item["candidates"] = [c.to_dict() for c in cands[:5]]
+            if not cands:
+                raise AssertionError("la búsqueda de programas no devolvió coincidencias")
+            m, _ = cat.get_program(cands[0].institution_id, cands[0].program_id)
+            if len(m) != 1:
+                raise AssertionError(f"la verificación exacta devolvió {len(m)} programas")
+            item["ok"] = True
+            print(f"OK    {source:6} programas: {len(cands)} coincidencias; verificado «{m[0].name}» ({m[0].institution_name}, {m[0].municipio})")
+        except (ConnectorError, AssertionError) as e:
+            ok_all = False
+            item["ok"], item["error"] = False, str(e)
+            print(f"FALLA {source:6} programas: {e}")
+        report.append(item)
+
     stamp = time.strftime("%Y%m%dT%H%M%S")
     path = out / f"sources-{stamp}.json"
     path.write_text(json.dumps({"at": stamp, "ok": ok_all, "results": report}, indent=2, ensure_ascii=False), encoding="utf-8")

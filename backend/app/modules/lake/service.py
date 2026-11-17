@@ -83,8 +83,11 @@ def _silver_data(db, owner_id, kind: str, rec: dict) -> tuple[dict, list]:
     common = {"fuente_entidad": org["source"] if org else None, "municipio_entidad": _norm(org["municipio"]) if org else None,
               "organization_status": rec.get("organization_status"), "record_status": rec.get("record_status")}
     if kind == "education":
+        prog = rec.get("program") or {}
         data = {"modalidad": rec.get("modalidad"), "graduado": rec.get("graduado"), "semestres": rec.get("semestres_aprobados"),
-                "anio_terminacion": (rec.get("terminacion") or {}).get("anio"), "nombre_estudios": _norm(rec.get("nombre_estudios"))}
+                "anio_terminacion": (rec.get("terminacion") or {}).get("anio"), "nombre_estudios": _norm(rec.get("nombre_estudios")),
+                "program_status": rec.get("program_status"), "programa_oficial": _norm(prog.get("name")) or None,
+                "nivel_programa": prog.get("level")}
     else:
         data = {"categoria_tiempo": rec.get("categoria_tiempo"), "tipo_entidad": rec.get("tipo_entidad"),
                 "fecha_ingreso": rec.get("fecha_ingreso"), "fecha_retiro": rec.get("fecha_retiro"), "es_actual": rec.get("es_actual")}

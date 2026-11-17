@@ -27,6 +27,20 @@ Estado a 2026-11-11. Las cinco fuentes se **consultaron en vivo** en datos.gov.c
 - **SIGEP**: se verifica por código SIGEP. El NIT se repite entre dependencias (p. ej. `899999061`, Distrito de Bogotá): la búsqueda por NIT lista las dependencias y la persona elige. Las columnas de correo, dirección y representante no se piden. Solo contiene entidades activas: una entidad liquidada no aparece.
 - **Interruptor operativo**: `DISABLED_SOURCES=rues,sigep` (variable de entorno) apaga fuentes sin cambiar código; la consulta responde `pending` y se conserva el borrador.
 
+## Programas académicos (`connectors/programs.py`)
+
+Tras verificar la institución (SNIES o SIET) se puede verificar el **programa** que la persona declaró. La búsqueda siempre está acotada a una institución (por código o por nombre); cada palabra significativa del programa es una cláusula `like` independiente (orden libre, sin tildes, palabras vacías ignoradas), y en SNIES se filtra además por el nivel de formación que corresponde a la modalidad declarada (TL → Tecnológica, UN → Universitaria, etc.).
+
+| Fuente | Dataset | Identificador del programa | Notas |
+|---|---|---|---|
+| SNIES | `upr9-nkiz` «Programas de educación superior» (MinEducación). 27 005 filas | Clave compuesta `título \| nivel \| municipio` dentro del código de institución | **Las columnas `codigoprograma` y `nombreprograma` de la fuente están corrompidas** (contienen el código y nombre del departamento); por eso no se usan. Si hay varias filas con la misma clave se prefiere la única `Activo`; si siguen siendo varias es **ambiguo** y no se verifica. La fuente muestra tildes dañadas («TECN¿LOGO») y se conservan tal cual. Los programas del SENA están en SNIES (códigos 9110 y siguientes) |
+| SIET | `2v94-3ypi` «Programas ETDH» (MinEducación) | `codigo_programa` (único) | Corte 11/2020, como las instituciones SIET |
+
+- **Probado en vivo** (2026-11-16, `scripts/check_sources.py`): «sena» + «analisis desarrollo software» (TL) → «TECNÓLOGO EN ANÁLISIS Y DESARROLLO DE SISTEMAS DE SOFTWARE», verificado; «politecnico» + «sistemas» en SIET, verificado.
+- La verificación es por la clave exacta en el backend; la búsqueda solo lista candidatos. La evidencia (respuesta cruda + SHA-256) se guarda en Bronze como `program_evidence`.
+- Un fallo de la fuente no revoca un programa ya verificado. Cambiar la modalidad o verificar otra institución lo devuelve a `pending`.
+- **Límite de confianza**: un programa verificado prueba que el programa existe (o existió) en la institución, **no** que la persona lo haya cursado. La clave compuesta de SNIES es más débil que un código oficial de programa.
+
 ## Reglas
 - Solo APIs/datos abiertos oficiales. Scraping **no** se implementa.
 - Hosts permitidos: `ALLOWED_CONNECTOR_HOSTS` (por defecto `www.datos.gov.co`).

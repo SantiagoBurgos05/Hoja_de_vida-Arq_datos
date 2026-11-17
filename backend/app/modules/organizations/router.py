@@ -27,6 +27,38 @@ class VerifyIn(BaseModel):
     record_id: Optional[str] = None
 
 
+class ProgramSearchIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    source: Literal["snies", "siet"]
+    institution_id: Optional[str] = Field(None, max_length=20)
+    institution_query: Optional[str] = Field(None, max_length=120)
+    municipio: Optional[str] = Field(None, max_length=60)
+    program_query: Optional[str] = Field(None, max_length=160)
+    modalidad: Optional[Literal["TC", "TL", "TE", "UN", "ES", "MG", "DOC"]] = None
+
+
+class ProgramVerifyIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    source: Literal["snies", "siet"]
+    institution_id: str = Field(..., min_length=1, max_length=20)
+    program_id: str = Field(..., min_length=1, max_length=400)
+    record_id: str
+
+
+@router.post("/programs/search")
+def search_programs(b: ProgramSearchIn, user=CurrentUser):
+    """Programas de una institución (por código) o de las instituciones cuyo nombre coincide. No verifica."""
+    enforce("lookup", str(user["_id"]), get_settings().rate_lookup)
+    return service.search_programs(user["_id"], b.source, b.institution_id, b.institution_query, b.municipio, b.program_query, b.modalidad)
+
+
+@router.post("/programs/verify")
+def verify_program(b: ProgramVerifyIn, user=CurrentUser):
+    """Verifica el programa por identificador exacto (y la institución, si aún no lo está) en un estudio superior."""
+    enforce("lookup", str(user["_id"]), get_settings().rate_lookup)
+    return service.verify_program(user["_id"], b.source, b.institution_id, b.program_id, oid(b.record_id))
+
+
 @router.get("/{org_id}")
 def get_org(org_id: str, user=CurrentUser):
     """Datos públicos de una entidad ya verificada (provienen de fuentes oficiales abiertas)."""

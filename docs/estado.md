@@ -2,7 +2,13 @@
 
 Fuente de verdad: lo que NO está en «Probado» no debe presentarse como hecho.
 
-## Revisión actual: rediseño de la interfaz (2026-11-16)
+## Revisión actual: verificación del programa académico (2026-11-16)
+
+- Nuevos endpoints `POST /api/organizations/programs/search` y `POST /api/organizations/programs/verify` (SNIES `upr9-nkiz` y SIET `2v94-3ypi`); campos `program_status` y `program` en estudios superiores (solo los fija el servidor); Silver añade `program_status`, `programa_oficial` y `nivel_programa`.
+- Interfaz: campo «Programa (opcional)» en la búsqueda de la entidad (institución + programa en una sola búsqueda, verifica ambos) y sección «Programa académico» tras verificar la institución (lista los programas de la institución, filtrables por el nivel de la modalidad).
+- **Probado**: 16 pruebas nuevas de backend (`test_programas.py`), frontend 13 pruebas y compilación, E2E 16 comprobaciones (con fuente simulada), consulta en vivo de programas SNIES y SIET (`check_sources.py`) y demostración local de la UI contra datos.gov.co real sin errores de consola. **No desplegado** hasta hacer commit y push. Limitaciones en `docs/fuentes.md` (clave compuesta SNIES, corte SIET 11/2020).
+
+## Revisión anterior: rediseño de la interfaz (2026-11-16)
 
 - Nueva interfaz con la identidad visual de la documentación (azul marino, índigo y verde azulado), modo claro y oscuro, y diseño responsivo (escritorio y móvil).
 - Mejoras de experiencia de usuario: acceso en dos paneles con mostrar u ocultar contraseña y medidor de longitud; indicador de pasos con el avance de cada sección; tarjetas temáticas; estados vacíos con guía; selectores de nivel R/B/MB para idiomas; verificador en pasos (fuente, búsqueda y candidatos) con ficha de la entidad verificada; zona de arrastrar y soltar para certificados con barra de cuota; confirmaciones dentro de la tarjeta en lugar de ventanas emergentes; lista de verificación antes de exportar.

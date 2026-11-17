@@ -17,10 +17,16 @@ def _rues(nit, name):
             "estado_matricula": "ACTIVA", "camara_comercio": "BOGOTA", "matricula": "100", "ultimo_ano_renovado": "2026"}
 
 
+def _prog(title, level="Universitaria", mun="BOGOTA", inst="1101"):
+    return {"codigoinstitucion": inst, "nombreinstitucion": "UNIVERSIDAD SINTETICA DEL NORTE", "nombretituloobtenido": title,
+            "nombrenivelformacion": level, "nombremunicipioprograma": mun, "nombreestadoprograma": "Activo"}
+
+
 ROWS = {
     "n5yy-8nav": [_snies("1101", "UNIVERSIDAD SINTETICA DEL NORTE", "BOGOTA", "BOGOTA D.C."),
                   _snies("2202", "UNIVERSIDAD SINTETICA DEL NORTE", "MEDELLIN", "ANTIOQUIA")],
     "c82u-588k": [_rues("900000000", "EMPRESA SINTETICA SAS")],
+    "upr9-nkiz": [_prog("INGENIERO DE SISTEMAS"), _prog("ADMINISTRADOR DE EMPRESAS"), _prog("TECNOLOGO EN SISTEMAS", "Tecnológica")],
 }
 
 

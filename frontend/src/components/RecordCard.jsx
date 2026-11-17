@@ -6,7 +6,8 @@ import EntityVerifier from "./EntityVerifier.jsx";
 import Documents from "./Documents.jsx";
 import { recordLabel } from "../lib/format.js";
 
-const SERVER_FIELDS = ["id", "user_id", "resume_id", "revision", "record_status", "organization_id", "organization_status", "created_at", "updated_at"];
+const SERVER_FIELDS = ["id", "user_id", "resume_id", "revision", "record_status", "organization_id", "organization_status",
+                       "program_status", "program", "created_at", "updated_at"];
 const RECORD_KIND = { supported: "ok", declared: "info", draft: "neutral" };
 
 // Tarjeta genérica de un registro (formación superior / experiencia). `toPayload` limpia campos del servidor.
@@ -19,7 +20,7 @@ export default function RecordCard({ path, recordType, record, sourcesFor, rende
   // Campos gestionados por el servidor se refrescan sin pisar lo que el usuario escribe.
   useEffect(() => {
     setForm((f) => ({ ...f, ...Object.fromEntries(SERVER_FIELDS.map((k) => [k, record[k]])) }));
-  }, [record.revision, record.record_status, record.organization_status, record.organization_id]); // eslint-disable-line
+  }, [record.revision, record.record_status, record.organization_status, record.organization_id, record.program_status, record.program?.program_id]); // eslint-disable-line
 
   useEffect(() => {
     if (record.organization_id) api.get(`/api/organizations/${record.organization_id}`).then(setOrg).catch(() => setOrg(null));
@@ -75,7 +76,9 @@ export default function RecordCard({ path, recordType, record, sourcesFor, rende
           <div className="panel">
             <div className="panel-head"><Icon name="shield" /><h4>Verificación de la entidad</h4></div>
             <EntityVerifier recordType={recordType} recordId={record.id} sources={sourcesFor(form)} status={status} organization={org}
-                            onChanged={() => onRefresh?.()} />
+                            onChanged={() => onRefresh?.()}
+                            study={recordType === "education_higher" ? { name: form.nombre_estudios, modalidad: form.modalidad,
+                                                                         programStatus: form.program_status, program: form.program } : null} />
           </div>
           <div className="panel">
             <Documents recordType={recordType} recordId={record.id} orgStatus={status} onChanged={() => onRefresh?.()} />

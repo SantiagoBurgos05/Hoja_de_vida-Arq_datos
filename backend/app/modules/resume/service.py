@@ -15,6 +15,8 @@ REQUIRED = {
 # work.tipo_entidad decide la fuente (pública -> SIGEP, privada -> RUES): una verificación hecha con
 # la fuente anterior no puede seguir asociada al registro.
 VERIFICATION_FIELDS = {"work": ("tipo_entidad",), "education_higher": ()}
+# Campos cuyo cambio invalida el programa verificado de un estudio superior (el nivel de formación depende de la modalidad).
+PROGRAM_FIELDS = ("modalidad",)
 
 
 def _now():
@@ -37,15 +39,17 @@ def _plain(d: dict) -> dict:
 def serialize(doc: dict | None) -> dict | None:
     if doc is None:
         return None
-    out = {}
-    for k, v in doc.items():
+    def conv(v):
         if isinstance(v, ObjectId):
-            out["id" if k == "_id" else k] = str(v)
-        elif isinstance(v, datetime):
-            out[k] = v.isoformat()
-        else:
-            out[k] = v
-    return out
+            return str(v)
+        if isinstance(v, datetime):
+            return v.isoformat()
+        if isinstance(v, dict):
+            return {k: conv(x) for k, x in v.items()}          # p. ej. el programa verificado (evidence_id, verified_at)
+        if isinstance(v, list):
+            return [conv(x) for x in v]
+        return v
+    return {("id" if k == "_id" else k): conv(v) for k, v in doc.items()}
 
 
 def empty_resume(user_id) -> dict:
@@ -127,6 +131,8 @@ def create_record(user_id, record_type: str, data: dict) -> dict:
     doc = {**_plain(data), "user_id": user_id, "resume_id": resume["_id"], "revision": 0,
            "organization_id": None, "organization_status": "pending",
            "created_at": _now(), "updated_at": _now()}
+    if record_type == "education_higher":
+        doc.update({"program_status": "pending", "program": None})
     doc["record_status"] = derive_status(user_id, record_type, doc)
     r = get_db()[RECORD_COLLECTIONS[record_type]].insert_one(doc)
     lake.silver_sync_record(user_id, record_type, r.inserted_id)
@@ -147,6 +153,9 @@ def update_record(user_id, record_type: str, record_id: ObjectId, data: dict) ->
             raise conflict("soportes_existentes",
                            "Elimine los soportes antes de cambiar el tipo de entidad: están asociados a la entidad verificada.")
         upd.update({"organization_id": None, "organization_status": "pending"})   # la verificación anterior deja de aplicar
+    if record_type == "education_higher" and cur.get("program_status") not in (None, "pending") and \
+            any(f in upd and upd[f] != cur.get(f) for f in PROGRAM_FIELDS):
+        upd.update({"program_status": "pending", "program": None})
     merged = {**cur, **upd}
     status = derive_status(user_id, record_type, merged)
     flt = {"_id": record_id, "user_id": user_id, "revision": cur["revision"]}
