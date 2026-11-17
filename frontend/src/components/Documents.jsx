@@ -3,8 +3,9 @@ import { api, downloadBlob, request } from "../lib/api.js";
 import { Badge, Banner, Icon, Spinner } from "./ui.jsx";
 import { checkFile, fmtBytes } from "../lib/format.js";
 
-// Soportes de un registro. La carga solo se habilita con la entidad verificada.
-export default function Documents({ recordType, recordId, orgStatus, onChanged, step }) {
+// Soportes de un registro. La carga solo se habilita con las validaciones exigidas: la entidad y, en estudios
+// superiores, también el programa (`ready`/`lockTitle`/`lockText` los decide quien usa el componente; el backend lo exige igual).
+export default function Documents({ recordType, recordId, orgStatus, onChanged, step, ready, lockTitle, lockText }) {
   const [docs, setDocs] = useState([]);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -12,7 +13,7 @@ export default function Documents({ recordType, recordId, orgStatus, onChanged, 
   const [over, setOver] = useState(false);
   const [confirmId, setConfirmId] = useState(null);
   const input = useRef();
-  const enabled = orgStatus === "verified";
+  const enabled = ready ?? orgStatus === "verified";
 
   const load = useCallback(async () => {
     try { setDocs(await api.get(`/api/documents?record_type=${recordType}&record_id=${recordId}`)); } catch (e) { setErr(e.message); }
@@ -47,7 +48,7 @@ export default function Documents({ recordType, recordId, orgStatus, onChanged, 
 
   return (
     <div className="docs">
-      <div className="panel-head">{step ? <span className={`step-dot${orgStatus === "verified" ? "" : " off"}`} aria-hidden="true">{step}</span> : <Icon name="file" />}<h4>Soportes (certificados)</h4></div>
+      <div className="panel-head">{step ? <span className={`step-dot${enabled ? (docs.length ? " done" : "") : " off"}`} aria-hidden="true">{enabled && docs.length ? <Icon name="check" /> : step}</span> : <Icon name="file" />}<h4>Soportes (certificados)</h4></div>
       {docs.length > 0 && (
         <ul className="doc-list">
           {docs.map((d) => (
@@ -82,8 +83,8 @@ export default function Documents({ recordType, recordId, orgStatus, onChanged, 
              onDragOver={(e) => { e.preventDefault(); if (enabled) setOver(true); }} onDragLeave={() => setOver(false)} onDrop={onDrop}>
         <span className="tile">{busy ? <Spinner /> : <Icon name={enabled ? "upload" : "lock"} size="lg" />}</span>
         <div>
-          <strong>{!enabled ? "Verifique primero la entidad" : busy ? "Subiendo…" : "Arrastre su certificado o haga clic para elegirlo"}</strong>
-          <span>{enabled ? "PDF, JPG o PNG · máx. 5 MB" : "La carga de certificados se habilita cuando la entidad está verificada."}</span>
+          <strong>{!enabled ? (lockTitle || "Verifique primero la entidad") : busy ? "Subiendo…" : "Arrastre su certificado o haga clic para elegirlo"}</strong>
+          <span>{enabled ? "PDF, JPG o PNG · máx. 5 MB" : (lockText || "La carga de certificados se habilita cuando la entidad está verificada.")}</span>
         </div>
         <input ref={input} type="file" accept="application/pdf,image/jpeg,image/png" disabled={!enabled || busy}
                onChange={(e) => e.target.files[0] && upload(e.target.files[0])} aria-label="Cargar certificado (PDF, JPG o PNG hasta 5 MB)" />

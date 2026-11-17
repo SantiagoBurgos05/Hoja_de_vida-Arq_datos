@@ -56,6 +56,10 @@ with sync_playwright() as pw:
     rec.locator("ul.candidates li").first.get_by_role("button", name="Verificar esta").click()
     expect(rec.get_by_text("Entidad verificada en fuente oficial")).to_be_visible(timeout=8000); ok("verificación por identificador oficial en el backend")
     expect(rec.get_by_text("No acredita", exact=False).first).to_be_visible()
+    # con solo la institución verificada la carga sigue bloqueada: falta la segunda validación (programa)
+    expect(rec.locator("input[type=file]")).to_be_disabled()
+    expect(rec.get_by_text("Falta verificar el programa académico")).to_be_visible()
+    ok("carga de certificados bloqueada hasta verificar también el programa")
     # al verificar la institución se buscan solos los programas que coinciden con el estudio declarado
     expect(rec.get_by_label("Programa", exact=True)).to_have_value("Ingeniería de Sistemas")
     expect(rec.locator("ul.candidates.programs li")).to_have_count(1, timeout=8000)          # «ingeniería» ≈ «INGENIERO»; no el tecnólogo

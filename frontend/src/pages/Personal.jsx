@@ -23,8 +23,8 @@ export default function Personal({ resume, setResume }) {
           {s("sexo", "Sexo", [["F", "Femenino (F)"], ["M", "Masculino (M)"]])}
         </div>
         <div className="grid">
-          {s("nacionalidad", "Nacionalidad", [["COL", "Colombiana"], ["EXTRANJERO", "Extranjero"]])}
-          {t("pais_nacionalidad", "País (si es extranjero)", { hint: extranjero ? "Indique el país de su nacionalidad." : "Solo si su nacionalidad es extranjera." })}
+          {s("nacionalidad", "Nacionalidad", [["COL", "Colombiana"], ["EXTRANJERO", "Extranjero"]], { span: 6 })}
+          {t("pais_nacionalidad", "País (si es extranjero)", { span: 6, hint: extranjero ? "Indique el país de su nacionalidad." : "Solo si su nacionalidad es extranjera." })}
         </div>
       </Card>
 
@@ -38,10 +38,10 @@ export default function Personal({ resume, setResume }) {
 
       <Card icon="calendar" tone="warn" title="Fecha y lugar de nacimiento">
         <div className="grid">
-          {t("nacimiento.fecha", "Fecha", { type: "date", autoComplete: "bday" })}
-          {t("nacimiento.pais", "País")}
-          {t("nacimiento.departamento", "Departamento")}
-          {t("nacimiento.municipio", "Municipio")}
+          {t("nacimiento.fecha", "Fecha", { type: "date", autoComplete: "bday", span: 3 })}
+          {t("nacimiento.pais", "País", { span: 3 })}
+          {t("nacimiento.departamento", "Departamento", { span: 3 })}
+          {t("nacimiento.municipio", "Municipio", { span: 3 })}
         </div>
       </Card>
 
@@ -55,8 +55,8 @@ export default function Personal({ resume, setResume }) {
           {t("correspondencia.municipio", "Municipio")}
         </div>
         <div className="grid">
-          {t("correspondencia.telefono", "Teléfono", { type: "tel", autoComplete: "tel" })}
-          {t("correspondencia.email", "Correo electrónico", { type: "email", autoComplete: "email" })}
+          {t("correspondencia.telefono", "Teléfono", { type: "tel", autoComplete: "tel", span: 6 })}
+          {t("correspondencia.email", "Correo electrónico", { type: "email", autoComplete: "email", span: 6 })}
         </div>
       </Card>
     </div>

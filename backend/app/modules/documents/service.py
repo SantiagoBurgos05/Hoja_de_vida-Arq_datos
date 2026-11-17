@@ -79,6 +79,9 @@ def upload(user_id, record_type: str, record_id: ObjectId, filename: str | None,
     rec = resume.get_record(user_id, record_type, record_id)       # 404 si es ajeno
     if rec.get("organization_status") != "verified" or not rec.get("organization_id"):
         raise conflict("entidad_no_verificada", "Verifique la entidad antes de cargar certificados.")
+    if record_type == "education_higher" and rec.get("program_status") != "verified":
+        # Estudios superiores: dos validaciones (institución y programa) antes de aceptar el certificado.
+        raise conflict("programa_no_verificado", "Verifique también el programa académico antes de cargar certificados.")
 
     h = lake.sha256(data)
     if idempotency_key:

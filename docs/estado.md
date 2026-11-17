@@ -2,7 +2,13 @@
 
 Fuente de verdad: lo que NO está en «Probado» no debe presentarse como hecho.
 
-## Revisión actual: estilo institucional y formularios guiados (2026-11-16)
+## Revisión actual: distribución estable y doble validación para soportes (2026-11-16)
+
+- Los certificados de **estudios superiores** solo se pueden cargar con la institución **y** el programa verificados. Lo exige el backend (409 `programa_no_verificado`) y la interfaz muestra la carga bloqueada con el motivo («Falta verificar el programa académico»). Colegio y experiencia siguen con una sola validación (la entidad). Los soportes cargados antes de esta regla no se retiran.
+- Distribución de campos en una cuadrícula fija de 12 columnas: cada campo tiene un ancho declarado (p. ej. Modalidad + Nombre del estudio en una fila, los cuatro datos de terminación en otra), así nada se reacomoda al aparecer ayudas, resultados o campos condicionales. La «Fecha de retiro» siempre ocupa su lugar (deshabilitada si es el empleo actual). Verificación y soportes se apilan a todo el ancho en lugar de dos columnas de alturas distintas.
+- Probado: backend completo (incluida una prueba nueva del bloqueo), frontend 13 pruebas y compilación, E2E 17 comprobaciones (nueva: carga bloqueada con solo la institución verificada) y revisión visual en escritorio y móvil sin desbordes ni errores de consola. **No desplegado** hasta commit y push.
+
+## Revisión anterior: estilo institucional y formularios guiados (2026-11-16)
 
 - Estilo más formal: barra superior azul marino con filete dorado, pestañas subrayadas, botones y chips rectangulares, títulos en azul marino. Colores de estado distintos entre sí: azul = acción, verde = verificado o adjunto, ámbar = pendiente («Entidad sin verificar»), rojo = error, gris = borrador, azul petróleo = información. Cada registro lleva un borde izquierdo del color de su estado.
 - Formularios: campos obligatorios con asterisco y borde ámbar mientras están vacíos, leyenda de obligatorios, campos agrupados (Estudio / Avance y terminación; Entidad / Cargo y periodo / Contacto), ejemplos en los campos, meses como lista en lugar de número, y pasos numerados en cada registro (1 Datos, 2 Verificación, 3 Soportes).

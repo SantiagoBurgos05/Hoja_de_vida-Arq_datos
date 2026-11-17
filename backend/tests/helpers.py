@@ -30,8 +30,17 @@ def mock_source(source: str, rows=None, status=200, boom: Exception | None = Non
 
 
 def reset_connectors():
+    from app.modules.organizations.connectors import programs
     for s in ("snies", "siet", "due", "rues", "sigep"):
         registry.set_connector(s, None)
+    for s in ("snies", "siet"):
+        programs.set_program_catalog(s, None)
+
+
+def mock_program_catalog(source: str, rows):
+    from app.modules.organizations.connectors import programs
+    t = httpx.MockTransport(lambda req: httpx.Response(200, json=rows))
+    programs.set_program_catalog(source, programs.make_program_catalog(source, transport=t))
 
 
 def edu_payload(**kw):
@@ -50,10 +59,18 @@ def work_payload(**kw):
     return base
 
 
-def verified_education(client, user, official_id="1101"):
-    """Crea un registro de educación superior y lo verifica con el conector simulado."""
+def verified_education(client, user, official_id="1101", program=True):
+    """Crea un registro de educación superior y verifica la institución con el conector simulado; con `program=True`
+    verifica también el programa (requisito para cargar certificados de estudios superiores)."""
     mock_source("snies", SNIES_ROWS)
     e = client.post("/api/education", json=edu_payload(), headers=user["headers"]).json()
     r = client.post("/api/organizations/verify", json={"source": "snies", "official_id": official_id, "record_type": "education_higher", "record_id": e["id"]}, headers=user["headers"])
     assert r.status_code == 200 and r.json()["organization_status"] == "verified", r.text
+    if program:
+        mock_program_catalog("snies", [{"codigoinstitucion": official_id, "nombreinstitucion": "UNIVERSIDAD SINTETICA DEL NORTE",
+                                        "nombretituloobtenido": "INGENIERO DE SISTEMAS", "nombrenivelformacion": "Universitaria",
+                                        "nombremunicipioprograma": "BOGOTA", "nombreestadoprograma": "Activo"}])
+        r = client.post("/api/organizations/programs/verify", json={"source": "snies", "institution_id": official_id,
+                        "program_id": "INGENIERO DE SISTEMAS | Universitaria | BOGOTA", "record_id": e["id"]}, headers=user["headers"])
+        assert r.status_code == 200 and r.json()["program_status"] == "verified", r.text
     return e["id"]

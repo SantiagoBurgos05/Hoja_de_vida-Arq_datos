@@ -1,4 +1,5 @@
 import pytest
+from bson import ObjectId
 from app.core import storage as st
 from app.core.db import get_db
 from .conftest import JPG, PDF, PNG
@@ -24,6 +25,14 @@ def test_no_se_permite_cargar_sin_entidad_verificada(client, alice):
     r = up(client, alice, e["id"])
     assert r.status_code == 409 and r.json()["detail"]["code"] == "entidad_no_verificada"
     assert get_db().documents.count_documents({"record_id": __import__("bson").ObjectId(e["id"])}) == 0
+
+
+def test_estudio_superior_exige_programa_verificado(client, alice):
+    """Institución verificada pero programa sin verificar: aún no se acepta el certificado."""
+    rid = verified_education(client, alice, program=False)
+    r = up(client, alice, rid)
+    assert r.status_code == 409 and r.json()["detail"]["code"] == "programa_no_verificado"
+    assert get_db().documents.count_documents({"record_id": ObjectId(rid)}) == 0
 
 
 def test_carga_y_recuperacion_en_sesion_futura_sin_recargar(client, alice):

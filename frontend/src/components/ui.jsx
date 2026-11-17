@@ -55,9 +55,10 @@ export function BrandMark() {
 
 // ---------------------------------------------------------------- formularios
 // `required`: asterisco visible (fuera del nombre accesible) y borde ámbar mientras esté vacío.
-export function Field({ label, children, hint, wide, required, missing }) {
+// `span`: columnas que ocupa en la cuadrícula de 12 (3, 4, 6, 8 o 12). `wide` equivale a 12.
+export function Field({ label, children, hint, wide, span, required, missing }) {
   return (
-    <label className={`field${wide ? " wide" : ""}${required && missing ? " missing" : ""}`}>
+    <label className={`field${wide ? " wide" : ""}${span ? ` span-${span}` : ""}${required && missing ? " missing" : ""}`}>
       <span>{label}{required && <span className="req" aria-hidden="true">*</span>}</span>
       {children}
       {hint && <small>{hint}</small>}
@@ -65,20 +66,20 @@ export function Field({ label, children, hint, wide, required, missing }) {
   );
 }
 
-export function Text({ label, value, onChange, type = "text", maxLength, wide, hint, required, ...rest }) {
+export function Text({ label, value, onChange, type = "text", maxLength, wide, span, hint, required, ...rest }) {
   return (
-    <Field label={label} wide={wide} hint={hint} required={required} missing={value == null || value === ""}>
+    <Field label={label} wide={wide} span={span} hint={hint} required={required} missing={value == null || value === ""}>
       <input type={type} value={value ?? ""} maxLength={maxLength} onChange={(e) => onChange(e.target.value)}
              aria-required={required || undefined} aria-label={required && typeof label === "string" ? label : undefined} {...rest} />
     </Field>
   );
 }
 
-export function Select({ label, value, onChange, options, wide, hint, required, placeholder = "Seleccione…" }) {
+export function Select({ label, value, onChange, options, wide, span, hint, required, disabled, placeholder = "Seleccione…" }) {
   return (
-    <Field label={label} wide={wide} hint={hint} required={required} missing={value == null || value === ""}>
+    <Field label={label} wide={wide} span={span} hint={hint} required={required} missing={value == null || value === ""}>
       <select value={value ?? ""} onChange={(e) => onChange(e.target.value === "" ? null : e.target.value)}
-              aria-required={required || undefined} aria-label={required && typeof label === "string" ? label : undefined}>
+              aria-required={required || undefined} aria-label={required && typeof label === "string" ? label : undefined} disabled={disabled}>
         <option value="">{placeholder}</option>
         {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
       </select>

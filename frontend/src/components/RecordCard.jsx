@@ -53,6 +53,13 @@ export default function RecordCard({ path, recordType, record, sourcesFor, rende
   const auto = useAutosave({ value: editable, loaded: true, save });
   const patch = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const status = form.organization_status;
+  // Estudios superiores: el certificado se habilita con la institución Y el programa verificados.
+  const twoSteps = recordType === "education_higher";
+  const ready = status === "verified" && (!twoSteps || form.program_status === "verified");
+  const lock = status !== "verified"
+    ? (twoSteps ? ["Verifique la institución y el programa", "La carga se habilita cuando la institución y el programa académico estén verificados en la fuente oficial."]
+                : ["Verifique primero la entidad", "La carga de certificados se habilita cuando la entidad está verificada."])
+    : ["Falta verificar el programa académico", "La institución ya está verificada. Verifique su programa en el paso 2 para habilitar la carga."];
 
   async function remove() {
     setDeleting(true);
@@ -85,14 +92,15 @@ export default function RecordCard({ path, recordType, record, sourcesFor, rende
         <div className="grid">{renderFields(form, patch)}</div>
         <div className="record-panels">
           <div className="panel">
-            <div className="panel-head"><span className={`step-dot${status === "verified" ? " done" : ""}`} aria-hidden="true">{status === "verified" ? <Icon name="check" /> : 2}</span><h4>Verificación de la entidad</h4></div>
+            <div className="panel-head"><span className={`step-dot${ready ? " done" : ""}`} aria-hidden="true">{ready ? <Icon name="check" /> : 2}</span><h4>{twoSteps ? "Verificación de la institución y del programa" : "Verificación de la entidad"}</h4></div>
             <EntityVerifier recordType={recordType} recordId={record.id} sources={sourcesFor(form)} status={status} organization={org}
                             onChanged={() => onRefresh?.()}
                             study={recordType === "education_higher" ? { name: form.nombre_estudios, modalidad: form.modalidad,
                                                                          programStatus: form.program_status, program: form.program } : null} />
           </div>
           <div className="panel">
-            <Documents recordType={recordType} recordId={record.id} orgStatus={status} onChanged={() => onRefresh?.()} step={3} />
+            <Documents recordType={recordType} recordId={record.id} orgStatus={status} onChanged={() => onRefresh?.()} step={3}
+                       ready={ready} lockTitle={lock[0]} lockText={lock[1]} />
           </div>
         </div>
       </div>

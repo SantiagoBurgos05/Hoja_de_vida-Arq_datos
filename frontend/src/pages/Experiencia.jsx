@@ -55,24 +55,25 @@ export default function Experiencia({ work, reloadWork }) {
             sourcesFor={(f) => (f.tipo_entidad === "publica" ? SOURCES.work_publica : SOURCES.work_privada)}
             renderFields={(f, p) => (<>
               <FieldGroup>Entidad</FieldGroup>
-              <Text label="Empresa o entidad (declarada)" required value={f.empresa_declarada} onChange={(v) => p("empresa_declarada", v)} wide
+              <Text label="Empresa o entidad (declarada)" required span={6} value={f.empresa_declarada} onChange={(v) => p("empresa_declarada", v)}
                     placeholder="Ej.: Bancolombia S.A. o Ministerio de Educación Nacional" />
-              <Select label="Tipo de entidad" required value={f.tipo_entidad} onChange={(v) => p("tipo_entidad", v)} options={[["publica", "Pública"], ["privada", "Privada"]]}
+              <Select label="Tipo de entidad" required span={3} value={f.tipo_entidad} onChange={(v) => p("tipo_entidad", v)} options={[["publica", "Pública"], ["privada", "Privada"]]}
                       hint="Define la fuente de verificación: SIGEP (pública) o RUES (privada)." />
-              <Select label="Categoría para tiempo total" value={f.categoria_tiempo} onChange={(v) => p("categoria_tiempo", v)} options={CATS} />
+              <Select label="Categoría para tiempo total" span={3} value={f.categoria_tiempo} onChange={(v) => p("categoria_tiempo", v)} options={CATS} />
               <FieldGroup>Cargo y periodo</FieldGroup>
-              <Text label="Cargo o contrato" required value={f.cargo} onChange={(v) => p("cargo", v)} placeholder="Ej.: Analista de datos" />
-              <Text label="Dependencia" value={f.dependencia} onChange={(v) => p("dependencia", v)} placeholder="Ej.: Dirección de Tecnología" />
-              <Select label="¿Es el empleo actual?" value={f.es_actual ? "si" : "no"} onChange={(v) => p("es_actual", v === "si")} options={[["si", "Sí"], ["no", "No"]]} />
-              <Text label="Fecha de ingreso" required type="date" value={f.fecha_ingreso} onChange={(v) => p("fecha_ingreso", v || null)} />
-              {!f.es_actual && <Text label="Fecha de retiro" type="date" value={f.fecha_retiro} onChange={(v) => p("fecha_retiro", v || null)} />}
+              <Text label="Cargo o contrato" required span={6} value={f.cargo} onChange={(v) => p("cargo", v)} placeholder="Ej.: Analista de datos" />
+              <Text label="Dependencia" span={6} value={f.dependencia} onChange={(v) => p("dependencia", v)} placeholder="Ej.: Dirección de Tecnología" />
+              <Select label="¿Es el empleo actual?" span={4} value={f.es_actual ? "si" : "no"} onChange={(v) => p("es_actual", v === "si")} options={[["si", "Sí"], ["no", "No"]]} />
+              <Text label="Fecha de ingreso" required span={4} type="date" value={f.fecha_ingreso} onChange={(v) => p("fecha_ingreso", v || null)} />
+              <Text label="Fecha de retiro" span={4} type="date" value={f.es_actual ? "" : f.fecha_retiro} onChange={(v) => p("fecha_retiro", v || null)}
+                    disabled={!!f.es_actual} hint={f.es_actual ? "No aplica: es su empleo actual." : undefined} />
               <FieldGroup>Contacto de la entidad</FieldGroup>
               <Text label="Dirección" value={f.direccion} onChange={(v) => p("direccion", v)} wide />
               <Text label="País" value={f.pais} onChange={(v) => p("pais", v)} />
               <Text label="Departamento" value={f.departamento} onChange={(v) => p("departamento", v)} />
               <Text label="Municipio" value={f.municipio} onChange={(v) => p("municipio", v)} />
-              <Text label="Correo de la entidad" type="email" value={f.correo_entidad} onChange={(v) => p("correo_entidad", v || null)} />
-              <Text label="Teléfonos" type="tel" value={f.telefonos} onChange={(v) => p("telefonos", v)} />
+              <Text label="Correo de la entidad" span={6} type="email" value={f.correo_entidad} onChange={(v) => p("correo_entidad", v || null)} />
+              <Text label="Teléfonos" span={6} type="tel" value={f.telefonos} onChange={(v) => p("telefonos", v)} />
             </>)} />
         ))}
         {work.length > 0 && <div className="add-row">{addBtn()}<small>Se agrega debajo de la última experiencia.</small></div>}

@@ -137,7 +137,7 @@ def test_busqueda_exige_institucion(client, alice):
 
 # -------------------------------------------------------------- verificación
 def test_verificar_programa_snies_por_identificador_compuesto(client, alice):
-    rid = verified_education(client, alice)
+    rid = verified_education(client, alice, program=False)
     rows = [snies_prog("INGENIERO  DE SISTEMAS", mun="BOGOTA")]
     calls = []
     mock_programs("snies", rows, calls)
@@ -178,7 +178,7 @@ def test_institucion_no_verificada_no_verifica_programa(client, alice):
 
 
 def test_programa_inexistente_y_ambiguo(client, alice):
-    rid = verified_education(client, alice)
+    rid = verified_education(client, alice, program=False)
     mock_programs("snies", [])
     assert _verify(client, alice, "snies", "1101", "OTRO | Universitaria | BOGOTA", rid)["program_status"] == "not_found"
     mock_programs("snies", [snies_prog("INGENIERO DE SISTEMAS"), snies_prog("INGENIERO DE SISTEMAS")])
@@ -186,14 +186,14 @@ def test_programa_inexistente_y_ambiguo(client, alice):
 
 
 def test_prefiere_el_unico_registro_activo(client, alice):
-    rid = verified_education(client, alice)
+    rid = verified_education(client, alice, program=False)
     mock_programs("snies", [snies_prog("INGENIERO DE SISTEMAS", estado="Activo"), snies_prog("INGENIERO DE SISTEMAS", estado="Inactivo")])
     r = _verify(client, alice, "snies", "1101", "INGENIERO DE SISTEMAS | Universitaria | BOGOTA", rid)
     assert r["program_status"] == "verified" and r["program"]["estado"] == "Activo"
 
 
 def test_identificador_compuesto_malformado(client, alice):
-    rid = verified_education(client, alice)
+    rid = verified_education(client, alice, program=False)
     calls = []
     mock_programs("snies", [snies_prog("X")], calls)
     assert _verify(client, alice, "snies", "1101", "solo-un-campo", rid)["program_status"] == "not_found" and calls == []
@@ -211,7 +211,7 @@ def test_siet_verifica_por_codigo_de_programa(client, alice):
 
 
 def test_falla_de_la_fuente_conserva_y_no_revoca(client, alice):
-    rid = verified_education(client, alice)
+    rid = verified_education(client, alice, program=False)
     mock_programs("snies", [snies_prog("INGENIERO DE SISTEMAS")])
     assert _verify(client, alice, "snies", "1101", "INGENIERO DE SISTEMAS | Universitaria | BOGOTA", rid)["program_status"] == "verified"
     mock_programs("snies", boom=httpx.ConnectTimeout("lento"))
@@ -221,7 +221,7 @@ def test_falla_de_la_fuente_conserva_y_no_revoca(client, alice):
 
 # -------------------------------------------------------------- coherencia
 def test_cambiar_modalidad_invalida_el_programa(client, alice):
-    rid = verified_education(client, alice)
+    rid = verified_education(client, alice, program=False)
     mock_programs("snies", [snies_prog("INGENIERO DE SISTEMAS")])
     _verify(client, alice, "snies", "1101", "INGENIERO DE SISTEMAS | Universitaria | BOGOTA", rid)
     rec = _rec(client, alice)
@@ -231,7 +231,7 @@ def test_cambiar_modalidad_invalida_el_programa(client, alice):
 
 
 def test_otros_cambios_conservan_el_programa(client, alice):
-    rid = verified_education(client, alice)
+    rid = verified_education(client, alice, program=False)
     mock_programs("snies", [snies_prog("INGENIERO DE SISTEMAS")])
     _verify(client, alice, "snies", "1101", "INGENIERO DE SISTEMAS | Universitaria | BOGOTA", rid)
     rec = _rec(client, alice)
@@ -240,7 +240,7 @@ def test_otros_cambios_conservan_el_programa(client, alice):
 
 
 def test_cambiar_de_institucion_reinicia_el_programa(client, alice):
-    rid = verified_education(client, alice)
+    rid = verified_education(client, alice, program=False)
     mock_programs("snies", [snies_prog("INGENIERO DE SISTEMAS")])
     _verify(client, alice, "snies", "1101", "INGENIERO DE SISTEMAS | Universitaria | BOGOTA", rid)
     client.post("/api/organizations/verify", json={"source": "snies", "official_id": "2202", "record_type": "education_higher", "record_id": rid},
@@ -256,7 +256,7 @@ def test_cliente_no_puede_declarar_programa_verificado(client, alice):
 
 
 def test_registro_ajeno_404(client, alice, bob):
-    rid = verified_education(client, alice)
+    rid = verified_education(client, alice, program=False)
     mock_programs("snies", [snies_prog("INGENIERO DE SISTEMAS")])
     r = client.post("/api/organizations/programs/verify", json={"source": "snies", "institution_id": "1101",
                     "program_id": "INGENIERO DE SISTEMAS | Universitaria | BOGOTA", "record_id": rid}, headers=bob["headers"])

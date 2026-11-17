@@ -199,8 +199,8 @@ export default function EntityVerifier({ recordType, recordId, sources, status, 
           )}
           <p className="muted small">{HINT[src]}</p>
           <div className="grid">
-            <label className="field"><span>Nombre</span><input value={q.query} placeholder="Ej.: minuto de dios" onChange={(e) => setQ({ ...qs, query: e.target.value })} /></label>
-            <label className="field"><span>Municipio</span><input value={q.municipio} placeholder="Opcional" onChange={(e) => setQ({ ...qs, municipio: e.target.value })} /></label>
+            <label className="field span-6"><span>Nombre</span><input value={q.query} placeholder="Ej.: minuto de dios" onChange={(e) => setQ({ ...qs, query: e.target.value })} /></label>
+            <label className="field span-6"><span>Municipio</span><input value={q.municipio} placeholder="Opcional" onChange={(e) => setQ({ ...qs, municipio: e.target.value })} /></label>
           </div>
           <div className="or">o</div>
           <label className="field"><span>o identificador oficial (NIT/código)</span><input value={q.official_id} inputMode="numeric" placeholder="Ej.: 890903938" onChange={(e) => setQ({ ...qs, official_id: e.target.value })} /></label>
