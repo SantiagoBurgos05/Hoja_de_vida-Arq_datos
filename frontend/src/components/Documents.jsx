@@ -4,7 +4,7 @@ import { Badge, Banner, Icon, Spinner } from "./ui.jsx";
 import { checkFile, fmtBytes } from "../lib/format.js";
 
 // Soportes de un registro. La carga solo se habilita con la entidad verificada.
-export default function Documents({ recordType, recordId, orgStatus, onChanged }) {
+export default function Documents({ recordType, recordId, orgStatus, onChanged, step }) {
   const [docs, setDocs] = useState([]);
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
@@ -47,7 +47,7 @@ export default function Documents({ recordType, recordId, orgStatus, onChanged }
 
   return (
     <div className="docs">
-      <div className="panel-head"><Icon name="file" /><h4>Soportes (certificados)</h4></div>
+      <div className="panel-head">{step ? <span className={`step-dot${orgStatus === "verified" ? "" : " off"}`} aria-hidden="true">{step}</span> : <Icon name="file" />}<h4>Soportes (certificados)</h4></div>
       {docs.length > 0 && (
         <ul className="doc-list">
           {docs.map((d) => (

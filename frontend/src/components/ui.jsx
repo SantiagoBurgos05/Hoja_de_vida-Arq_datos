@@ -54,33 +54,53 @@ export function BrandMark() {
 }
 
 // ---------------------------------------------------------------- formularios
-export function Field({ label, children, hint, wide }) {
+// `required`: asterisco visible (fuera del nombre accesible) y borde ámbar mientras esté vacío.
+export function Field({ label, children, hint, wide, required, missing }) {
   return (
-    <label className={`field${wide ? " wide" : ""}`}>
-      <span>{label}</span>
+    <label className={`field${wide ? " wide" : ""}${required && missing ? " missing" : ""}`}>
+      <span>{label}{required && <span className="req" aria-hidden="true">*</span>}</span>
       {children}
       {hint && <small>{hint}</small>}
     </label>
   );
 }
 
-export function Text({ label, value, onChange, type = "text", maxLength, wide, hint, ...rest }) {
+export function Text({ label, value, onChange, type = "text", maxLength, wide, hint, required, ...rest }) {
   return (
-    <Field label={label} wide={wide} hint={hint}>
-      <input type={type} value={value ?? ""} maxLength={maxLength} onChange={(e) => onChange(e.target.value)} {...rest} />
+    <Field label={label} wide={wide} hint={hint} required={required} missing={value == null || value === ""}>
+      <input type={type} value={value ?? ""} maxLength={maxLength} onChange={(e) => onChange(e.target.value)}
+             aria-required={required || undefined} aria-label={required && typeof label === "string" ? label : undefined} {...rest} />
     </Field>
   );
 }
 
-export function Select({ label, value, onChange, options, wide, hint, placeholder = "Seleccione…" }) {
+export function Select({ label, value, onChange, options, wide, hint, required, placeholder = "Seleccione…" }) {
   return (
-    <Field label={label} wide={wide} hint={hint}>
-      <select value={value ?? ""} onChange={(e) => onChange(e.target.value === "" ? null : e.target.value)}>
+    <Field label={label} wide={wide} hint={hint} required={required} missing={value == null || value === ""}>
+      <select value={value ?? ""} onChange={(e) => onChange(e.target.value === "" ? null : e.target.value)}
+              aria-required={required || undefined} aria-label={required && typeof label === "string" ? label : undefined}>
         <option value="">{placeholder}</option>
         {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
       </select>
     </Field>
   );
+}
+
+// Mes como lista (más claro que escribir un número del 1 al 12). Guarda el número.
+export const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+export function MonthSelect({ label, value, onChange, ...rest }) {
+  return <Select label={label} value={value == null ? "" : String(value)} onChange={(v) => onChange(v == null ? null : Number(v))}
+                 options={MESES.map((m, i) => [String(i + 1), m])} {...rest} />;
+}
+
+// Leyenda de campos obligatorios.
+export function RequiredLegend() {
+  return <p className="legend"><span className="req" aria-hidden="true">*</span>Campo obligatorio. Los cambios se guardan automáticamente.</p>;
+}
+
+// Título de un grupo de campos dentro de una cuadrícula.
+export function FieldGroup({ children }) {
+  return <div className="fieldset-title" role="heading" aria-level={4}>{children}</div>;
 }
 
 // Selector de nivel R / B / MB como grupo de opciones (más rápido que una lista desplegable).

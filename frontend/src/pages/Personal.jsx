@@ -1,5 +1,5 @@
 import React from "react";
-import { Card, Select, Text } from "../components/ui.jsx";
+import { Card, RequiredLegend, Select, Text } from "../components/ui.jsx";
 import { getPath, setPath } from "../lib/format.js";
 
 export default function Personal({ resume, setResume }) {
@@ -11,14 +11,15 @@ export default function Personal({ resume, setResume }) {
   return (
     <div className="stack">
       <Card icon="id" title="Identificación" desc="Tal como aparece en su documento de identidad.">
+        <RequiredLegend />
         <div className="grid">
-          {t("primer_apellido", "Primer apellido", { maxLength: 60, autoComplete: "family-name" })}
+          {t("primer_apellido", "Primer apellido", { maxLength: 60, autoComplete: "family-name", required: true })}
           {t("segundo_apellido", "Segundo apellido (o de casada)", { maxLength: 60 })}
-          {t("nombres", "Nombres", { maxLength: 80, autoComplete: "given-name" })}
+          {t("nombres", "Nombres", { maxLength: 80, autoComplete: "given-name", required: true })}
         </div>
         <div className="grid">
           {s("tipo_documento", "Documento de identificación", [["CC", "Cédula de ciudadanía (C.C.)"], ["CE", "Cédula de extranjería (C.E.)"], ["PAS", "Pasaporte"]])}
-          {t("numero_documento", "Número", { maxLength: 30, inputMode: "numeric" })}
+          {t("numero_documento", "Número", { maxLength: 30, inputMode: "numeric", required: true })}
           {s("sexo", "Sexo", [["F", "Femenino (F)"], ["M", "Masculino (M)"]])}
         </div>
         <div className="grid">

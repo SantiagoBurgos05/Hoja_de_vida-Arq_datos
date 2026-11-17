@@ -2,11 +2,20 @@
 
 Fuente de verdad: lo que NO está en «Probado» no debe presentarse como hecho.
 
-## Revisión actual: verificación del programa académico (2026-11-16)
+## Revisión actual: estilo institucional y formularios guiados (2026-11-16)
+
+- Estilo más formal: barra superior azul marino con filete dorado, pestañas subrayadas, botones y chips rectangulares, títulos en azul marino. Colores de estado distintos entre sí: azul = acción, verde = verificado o adjunto, ámbar = pendiente («Entidad sin verificar»), rojo = error, gris = borrador, azul petróleo = información. Cada registro lleva un borde izquierdo del color de su estado.
+- Formularios: campos obligatorios con asterisco y borde ámbar mientras están vacíos, leyenda de obligatorios, campos agrupados (Estudio / Avance y terminación; Entidad / Cargo y periodo / Contacto), ejemplos en los campos, meses como lista en lugar de número, y pasos numerados en cada registro (1 Datos, 2 Verificación, 3 Soportes).
+- Los botones «Agregar estudio superior» y «Agregar experiencia» quedan después del último registro; el registro nuevo se lleva a la vista y se enfoca su primer campo. Cada registro muestra «Estudio N de M» o «Experiencia N de M».
+- Probado: frontend 13 pruebas y compilación; E2E 16 comprobaciones; revisión visual en escritorio (claro y oscuro) y móvil sin errores de consola. Sin cambios en la API. **No desplegado** hasta commit y push.
+
+## Revisión anterior: verificación del programa académico (2026-11-16)
 
 - Nuevos endpoints `POST /api/organizations/programs/search` y `POST /api/organizations/programs/verify` (SNIES `upr9-nkiz` y SIET `2v94-3ypi`); campos `program_status` y `program` en estudios superiores (solo los fija el servidor); Silver añade `program_status`, `programa_oficial` y `nivel_programa`.
 - Interfaz: campo «Programa (opcional)» en la búsqueda de la entidad (institución + programa en una sola búsqueda, verifica ambos) y sección «Programa académico» tras verificar la institución (lista los programas de la institución, filtrables por el nivel de la modalidad).
 - **Probado**: 16 pruebas nuevas de backend (`test_programas.py`), frontend 13 pruebas y compilación, E2E 16 comprobaciones (con fuente simulada), consulta en vivo de programas SNIES y SIET (`check_sources.py`) y demostración local de la UI contra datos.gov.co real sin errores de consola. **No desplegado** hasta hacer commit y push. Limitaciones en `docs/fuentes.md` (clave compuesta SNIES, corte SIET 11/2020).
+
+- **Corrección (2026-11-16, tras probar en producción)**: la búsqueda de programas no devolvía nada si la institución se indicaba por **NIT** (se usaba como código SNIES) o si la **modalidad** declarada no coincidía con el nivel oficial. Ahora el NIT se resuelve a los códigos de la institución, las palabras se comparan por raíz y, sin coincidencias, se relajan los filtros con un mensaje. En la interfaz «Programa» se precarga con el nombre de los estudios y, al verificar solo la institución, los programas que coinciden se buscan automáticamente. Probado: 20 pruebas de programas, E2E 16 comprobaciones, y en la interfaz local contra datos.gov.co real los dos casos (nombre + municipio + NIT con modalidad UN, y solo la institución) listaron y verificaron «TECNÓLOGO EN ANÁLISIS Y DESARROLLO DE SISTEMAS DE SOFTWARE» sin errores de consola. **No desplegado** hasta commit y push.
 
 ## Revisión anterior: rediseño de la interfaz (2026-11-16)
 

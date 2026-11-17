@@ -60,8 +60,8 @@ def test_palabras_en_cualquier_orden_y_nivel_segun_modalidad(client, alice):
     assert r["program_status"] == "pending" and len(r["candidates"]) == 1
     w = _where(calls[0])
     assert "upper(nombreinstitucion) like '%S_N_%'" in w
-    for pat in ("%_N_L_S_S%", "%D_S_RR_LL_%", "%S_FTW_R_%"):
-        assert f"upper(nombretituloobtenido) like '{pat}'" in w          # cada palabra por separado
+    for pat in ("%_N_L_S%", "%D_S_RR%", "%S_FTW_%"):
+        assert f"upper(nombretituloobtenido) like '{pat}'" in w          # cada palabra por separado, recortada a su raíz
     assert "nombrenivelformacion in ('Tecnológica')" in w
     assert " DE%" not in w and "'%Y%'" not in w                           # conectores ignorados
 
@@ -74,6 +74,60 @@ def test_programas_de_una_institucion_por_codigo(client, alice):
     assert "codigoinstitucion='1101'" in _where(calls[0])
     sel = parse_qs(urlparse(calls[0]).query)["$select"][0].split(",")
     assert "codigoprograma" not in sel and "nombreprograma" not in sel     # columnas corridas: no se piden
+
+
+def test_raiz_de_palabras_tolera_variaciones_del_titulo():
+    import re
+    def hit(q, title):
+        rx = [re.compile("^" + p.replace("%", ".*").replace("_", ".") + "$") for p in P.word_patterns(q)]
+        return all(r.match(title) for r in rx)
+    assert hit("Tecnología en análisis y desarrollo de software", "TECNOLOGO EN ANALISIS Y DESARROLLO DE SISTEMAS DE SOFTWARE")
+    assert hit("Licenciatura en educación infantil", "LICENCIADO EN EDUCACION INFANTIL")
+    assert hit("Administración de empresas", "ADMINISTRADOR DE EMPRESAS")
+
+
+def test_busqueda_por_nit_resuelve_los_codigos_de_la_institucion(client, alice):
+    """El catálogo de programas no tiene NIT: el NIT se convierte en los códigos de las sedes que lo comparten."""
+    mock_source("snies", SNIES_ROWS)                            # las 3 sedes comparten el NIT 900.000.000-1
+    calls = []
+    mock_programs("snies", [snies_prog("TECNOLOGO EN SISTEMAS", "Tecnológica")], calls)
+    r = _search(client, alice, source="snies", institution_id="900000000-1", program_query="sistemas", modalidad="TL")
+    assert len(r["candidates"]) == 1
+    w = _where(calls[0])
+    assert "codigoinstitucion in ('1101', '11010', '2202')" in w and "900000000" not in w
+
+
+def test_nit_inexistente_lo_indica(client, alice):
+    mock_source("snies", [])
+    calls = []
+    mock_programs("snies", [], calls)
+    r = _search(client, alice, source="snies", institution_id="123456789", program_query="sistemas")
+    assert r["candidates"] == [] and "NIT" in r["message"] and calls == []
+
+
+def test_sin_coincidencias_relaja_nivel_y_luego_palabras(client, alice):
+    """Modalidad declarada distinta al nivel oficial: se muestran los programas de otros niveles; palabras sin
+    coincidencia: se listan los programas de la institución. El mensaje explica qué filtro se relajó."""
+    calls = []
+    def handler(req):
+        calls.append(str(req.url)); w = _where(str(req.url))
+        if "nombrenivelformacion in" in w:
+            return httpx.Response(200, json=[])                 # nada de nivel Universitaria
+        return httpx.Response(200, json=[snies_prog("TECNOLOGO EN SISTEMAS", "Tecnológica")])
+    P.set_program_catalog("snies", P.make_program_catalog("snies", transport=httpx.MockTransport(handler)))
+    r = _search(client, alice, source="snies", institution_id="1101", program_query="sistemas", modalidad="UN", municipio="bogota")
+    assert len(r["candidates"]) == 1 and "otros niveles" in r["message"]
+    w2 = _where(calls[1])
+    assert "nombrenivelformacion" not in w2 and "nombremunicipioprograma" not in w2 and "nombretituloobtenido" in w2
+
+    calls.clear()
+    def handler2(req):
+        calls.append(str(req.url))
+        return httpx.Response(200, json=[] if "nombretituloobtenido" in _where(str(req.url)) else [snies_prog("ADMINISTRADOR DE EMPRESAS")])
+    P.set_program_catalog("snies", P.make_program_catalog("snies", transport=httpx.MockTransport(handler2)))
+    r = _search(client, alice, source="snies", institution_id="1101", program_query="xyz palabras", modalidad="UN")
+    assert [c["name"] for c in r["candidates"]] == ["ADMINISTRADOR DE EMPRESAS"] and "No encontramos" in r["message"]
+    assert all("codigoinstitucion='1101'" in _where(u) for u in calls)       # siempre acotado a la institución
 
 
 def test_busqueda_exige_institucion(client, alice):

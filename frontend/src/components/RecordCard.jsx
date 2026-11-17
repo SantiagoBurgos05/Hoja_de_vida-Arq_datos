@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api.js";
 import { useAutosave } from "../lib/useAutosave.js";
-import { Badge, ConflictBanner, Icon, SaveStatus, Spinner } from "./ui.jsx";
+import { Badge, ConflictBanner, Icon, RequiredLegend, SaveStatus, Spinner } from "./ui.jsx";
 import EntityVerifier from "./EntityVerifier.jsx";
 import Documents from "./Documents.jsx";
 import { recordLabel } from "../lib/format.js";
@@ -11,11 +11,19 @@ const SERVER_FIELDS = ["id", "user_id", "resume_id", "revision", "record_status"
 const RECORD_KIND = { supported: "ok", declared: "info", draft: "neutral" };
 
 // Tarjeta genérica de un registro (formación superior / experiencia). `toPayload` limpia campos del servidor.
-export default function RecordCard({ path, recordType, record, sourcesFor, renderFields, title, subtitle, icon = "doc", onDelete, onRefresh }) {
+export default function RecordCard({ path, recordType, record, sourcesFor, renderFields, title, subtitle, icon = "doc", onDelete, onRefresh, label, isNew }) {
   const [form, setForm] = useState(record);
   const [org, setOrg] = useState(null);
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const ref = useRef(null);
+  // Registro recién agregado: se lleva a la vista y se enfoca su primer campo.
+  useEffect(() => {
+    if (!isNew || !ref.current) return;
+    ref.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    const t = setTimeout(() => ref.current?.querySelector(".record-body input, .record-body select")?.focus({ preventScroll: true }), 350);
+    return () => clearTimeout(t);
+  }, [isNew]);
 
   // Campos gestionados por el servidor se refrescan sin pisar lo que el usuario escribe.
   useEffect(() => {
@@ -52,10 +60,11 @@ export default function RecordCard({ path, recordType, record, sourcesFor, rende
   }
 
   return (
-    <article className="record">
+    <article className={`record st-${form.record_status || "draft"}${isNew ? " new" : ""}`} ref={ref}>
       <header>
         <span className={`tile${form.record_status === "supported" ? " accent" : ""}`}><Icon name={icon} size="lg" /></span>
         <div className="meta">
+          {label && <span className="record-n">{label}</span>}
           <h3>{title(form)}</h3>
           {subtitle && <p>{subtitle(form)}</p>}
         </div>
@@ -71,17 +80,19 @@ export default function RecordCard({ path, recordType, record, sourcesFor, rende
               onKeepMine={() => { setForm((f) => ({ ...f, revision: auto.conflict?.revision ?? f.revision })); auto.clearConflict(); setTimeout(auto.saveNow, 0); }} />
           </div>
         )}
+        <div className="panel-head"><span className="step-dot" aria-hidden="true">1</span><h4>Datos del registro</h4></div>
+        <RequiredLegend />
         <div className="grid">{renderFields(form, patch)}</div>
         <div className="record-panels">
           <div className="panel">
-            <div className="panel-head"><Icon name="shield" /><h4>Verificación de la entidad</h4></div>
+            <div className="panel-head"><span className={`step-dot${status === "verified" ? " done" : ""}`} aria-hidden="true">{status === "verified" ? <Icon name="check" /> : 2}</span><h4>Verificación de la entidad</h4></div>
             <EntityVerifier recordType={recordType} recordId={record.id} sources={sourcesFor(form)} status={status} organization={org}
                             onChanged={() => onRefresh?.()}
                             study={recordType === "education_higher" ? { name: form.nombre_estudios, modalidad: form.modalidad,
                                                                          programStatus: form.program_status, program: form.program } : null} />
           </div>
           <div className="panel">
-            <Documents recordType={recordType} recordId={record.id} orgStatus={status} onChanged={() => onRefresh?.()} />
+            <Documents recordType={recordType} recordId={record.id} orgStatus={status} onChanged={() => onRefresh?.()} step={3} />
           </div>
         </div>
       </div>

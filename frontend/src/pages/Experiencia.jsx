@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { api } from "../lib/api.js";
-import { Card, EmptyState, Icon, Note, Select, Spinner, Text } from "../components/ui.jsx";
+import { Card, EmptyState, FieldGroup, Icon, Note, Select, Spinner, Text } from "../components/ui.jsx";
 import RecordCard from "../components/RecordCard.jsx";
 import { SOURCES } from "../components/EntityVerifier.jsx";
 
@@ -32,36 +32,41 @@ function Tiempo({ refreshKey }) {
 export default function Experiencia({ work, reloadWork }) {
   const [tick, setTick] = useState(0);
   const [adding, setAdding] = useState(false);
+  const [newId, setNewId] = useState(null);
   const refresh = async () => { await reloadWork(); setTick((t) => t + 1); };
   async function add() {
     setAdding(true);
-    try { await api.post("/api/work", { categoria_tiempo: "empleado_privado", tipo_entidad: "privada" }); await refresh(); } finally { setAdding(false); }
+    try { const r = await api.post("/api/work", { categoria_tiempo: "empleado_privado", tipo_entidad: "privada" }); setNewId(r.id); await refresh(); } finally { setAdding(false); }
   }
   async function del(id) { await api.del(`/api/work/${id}`); refresh(); }
   const addBtn = (cls = "") => <button className={cls} onClick={add} disabled={adding}>{adding ? <Spinner /> : <Icon name="plus" />}Agregar experiencia</button>;
   return (
     <div className="stack">
-      <Card icon="briefcase" title="Experiencia laboral" desc="Comience por el empleo actual. La plantilla imprime 4 experiencias por hoja y se repite la hoja si hay más."
-            actions={work.length > 0 && addBtn("secondary sm")}>
+      <Card icon="briefcase" title="Experiencia laboral" desc="Comience por el empleo actual. La plantilla imprime 4 experiencias por hoja y se repite la hoja si hay más.">
         {work.length === 0 ? (
           <EmptyState icon="briefcase" title="Sin experiencia registrada" action={addBtn()}>
             Agregue cada empleo o contrato. Verifique la empresa en RUES o la entidad pública en SIGEP para adjuntar su certificado laboral.
           </EmptyState>
-        ) : work.map((r) => (
+        ) : work.map((r, i) => (
           <RecordCard key={r.id} path="/api/work" recordType="work" record={r} onDelete={del} onRefresh={refresh} icon={r.tipo_entidad === "publica" ? "building" : "briefcase"}
+            label={`Experiencia ${i + 1} de ${work.length}`} isNew={r.id === newId}
             title={(f) => `${f.es_actual ? "Actual" : "Anterior"} — ${f.empresa_declarada || "sin entidad"}`}
             subtitle={(f) => [f.cargo, f.fecha_ingreso && `${f.fecha_ingreso} → ${f.es_actual ? "hoy" : f.fecha_retiro || "…"}`].filter(Boolean).join(" · ") || "Complete los datos del empleo"}
             sourcesFor={(f) => (f.tipo_entidad === "publica" ? SOURCES.work_publica : SOURCES.work_privada)}
             renderFields={(f, p) => (<>
-              <Text label="Empresa o entidad (declarada)" value={f.empresa_declarada} onChange={(v) => p("empresa_declarada", v)} wide />
-              <Select label="Tipo de entidad" value={f.tipo_entidad} onChange={(v) => p("tipo_entidad", v)} options={[["publica", "Pública"], ["privada", "Privada"]]}
-                      hint="Define la fuente de verificación: SIGEP o RUES." />
+              <FieldGroup>Entidad</FieldGroup>
+              <Text label="Empresa o entidad (declarada)" required value={f.empresa_declarada} onChange={(v) => p("empresa_declarada", v)} wide
+                    placeholder="Ej.: Bancolombia S.A. o Ministerio de Educación Nacional" />
+              <Select label="Tipo de entidad" required value={f.tipo_entidad} onChange={(v) => p("tipo_entidad", v)} options={[["publica", "Pública"], ["privada", "Privada"]]}
+                      hint="Define la fuente de verificación: SIGEP (pública) o RUES (privada)." />
               <Select label="Categoría para tiempo total" value={f.categoria_tiempo} onChange={(v) => p("categoria_tiempo", v)} options={CATS} />
+              <FieldGroup>Cargo y periodo</FieldGroup>
+              <Text label="Cargo o contrato" required value={f.cargo} onChange={(v) => p("cargo", v)} placeholder="Ej.: Analista de datos" />
+              <Text label="Dependencia" value={f.dependencia} onChange={(v) => p("dependencia", v)} placeholder="Ej.: Dirección de Tecnología" />
               <Select label="¿Es el empleo actual?" value={f.es_actual ? "si" : "no"} onChange={(v) => p("es_actual", v === "si")} options={[["si", "Sí"], ["no", "No"]]} />
-              <Text label="Fecha de ingreso" type="date" value={f.fecha_ingreso} onChange={(v) => p("fecha_ingreso", v || null)} />
+              <Text label="Fecha de ingreso" required type="date" value={f.fecha_ingreso} onChange={(v) => p("fecha_ingreso", v || null)} />
               {!f.es_actual && <Text label="Fecha de retiro" type="date" value={f.fecha_retiro} onChange={(v) => p("fecha_retiro", v || null)} />}
-              <Text label="Cargo o contrato" value={f.cargo} onChange={(v) => p("cargo", v)} />
-              <Text label="Dependencia" value={f.dependencia} onChange={(v) => p("dependencia", v)} />
+              <FieldGroup>Contacto de la entidad</FieldGroup>
               <Text label="Dirección" value={f.direccion} onChange={(v) => p("direccion", v)} wide />
               <Text label="País" value={f.pais} onChange={(v) => p("pais", v)} />
               <Text label="Departamento" value={f.departamento} onChange={(v) => p("departamento", v)} />
@@ -70,6 +75,7 @@ export default function Experiencia({ work, reloadWork }) {
               <Text label="Teléfonos" type="tel" value={f.telefonos} onChange={(v) => p("telefonos", v)} />
             </>)} />
         ))}
+        {work.length > 0 && <div className="add-row">{addBtn()}<small>Se agrega debajo de la última experiencia.</small></div>}
       </Card>
       <Tiempo refreshKey={tick} />
     </div>

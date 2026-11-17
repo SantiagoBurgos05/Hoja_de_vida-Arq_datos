@@ -48,17 +48,17 @@ with sync_playwright() as pw:
     expect(rec.get_by_text("Entidad sin verificar")).to_be_visible()
     expect(rec.locator("input[type=file]")).to_be_disabled(); ok("carga de certificados deshabilitada antes de verificar la entidad")
     rec.get_by_text("Buscar y verificar entidad").click()
-    rec.get_by_label("Nombre", exact=True).fill("universidad"); rec.get_by_role("button", name="Buscar").click()
+    expect(rec.get_by_label("Programa (opcional)")).to_have_value("Ingeniería de Sistemas")    # precargado con el estudio declarado
+    rec.get_by_label("Programa (opcional)").fill("")                                         # primero solo la institución
+    rec.get_by_label("Nombre", exact=True).fill("universidad"); rec.get_by_role("button", name="Buscar", exact=True).click()
     expect(rec.locator("ul.candidates li")).to_have_count(2); ok("búsqueda presenta coincidencias sin conceder verificación")
     expect(rec.get_by_text("Entidad sin verificar")).to_be_visible()
     rec.locator("ul.candidates li").first.get_by_role("button", name="Verificar esta").click()
     expect(rec.get_by_text("Entidad verificada en fuente oficial")).to_be_visible(timeout=8000); ok("verificación por identificador oficial en el backend")
     expect(rec.get_by_text("No acredita", exact=False).first).to_be_visible()
-    # programa dentro de la institución verificada: la búsqueda se precarga con el nombre del estudio
-    rec.get_by_text("Buscar programa en esta institución").click()
+    # al verificar la institución se buscan solos los programas que coinciden con el estudio declarado
     expect(rec.get_by_label("Programa", exact=True)).to_have_value("Ingeniería de Sistemas")
-    rec.get_by_role("button", name="Buscar programa").click()
-    expect(rec.locator("ul.candidates.programs li")).to_have_count(1, timeout=8000)          # solo el nivel universitario que coincide
+    expect(rec.locator("ul.candidates.programs li")).to_have_count(1, timeout=8000)          # «ingeniería» ≈ «INGENIERO»; no el tecnólogo
     rec.get_by_role("button", name="Verificar este programa").click()
     expect(rec.get_by_text("Programa verificado en la fuente oficial")).to_be_visible(timeout=8000)
     ok("programa académico verificado dentro de la institución (nivel según la modalidad)")

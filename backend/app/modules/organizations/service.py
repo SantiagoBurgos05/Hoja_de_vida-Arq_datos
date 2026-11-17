@@ -132,21 +132,59 @@ def _catalog(source: str):
     return get_program_catalog(source)
 
 
+def _digits(v: str) -> str:
+    return "".join(ch for ch in v if ch.isdigit())
+
+
 def search_programs(user_id, source: str, institution_id=None, institution_query=None, municipio=None,
                     program_query=None, modalidad=None) -> dict:
-    """Lista programas de una institución (por código) o de las instituciones cuyo nombre coincide.
-    Solo produce candidatos: no verifica nada."""
-    if not ((institution_id or "").strip() or (institution_query or "").strip()):
-        raise bad("criterio_requerido", "Indique la institución (nombre o código).")
+    """Lista programas de una institución (por código o NIT) o de las instituciones cuyo nombre coincide.
+    Solo produce candidatos: no verifica nada. Si no hay coincidencias exactas se relajan los filtros en este orden:
+    (1) sin nivel ni municipio, conservando las palabras del programa; (2) programas del nivel en la institución;
+    (3) todos los programas de la institución. El mensaje dice qué filtro se relajó."""
+    iid, iq = (institution_id or "").strip(), (institution_query or "").strip()
+    if not (iid or iq):
+        raise bad("criterio_requerido", "Indique la institución (nombre, código o NIT).")
+    pq = (program_query or "").strip() or None
+    mun = (municipio or "").strip() or None
     try:
-        cands = _catalog(source).search_programs(institution_id, institution_query, municipio, program_query, modalidad)
+        cat = _catalog(source)
+        ids = None
+        if iid and len(_digits(iid)) >= 9:
+            # NIT: el catálogo de programas no tiene NIT; se resuelve a los códigos de institución (sedes) en la fuente.
+            ids = [x.official_id for x in get_connector(source).search(None, None, iid)]
+            if not ids:
+                return {"program_status": "pending", "candidates": [],
+                        "message": f"El NIT {iid} no corresponde a ninguna institución en {source.upper()}."}
+            iid = None
+        base = {"institution_id": iid or None, "institution_query": None if (iid or ids) else iq, "institution_ids": ids}
+        lvl = MODALIDAD_TXT.get(modalidad or "", modalidad or "")
+        attempts = [({"municipio": mun, "program_query": pq, "modalidad": modalidad}, "")]
+        if pq and (modalidad or mun):
+            attempts.append(({"program_query": pq},
+                             f"No hay programas «{pq}» de nivel {lvl}" + (f" en {mun}" if mun else "") +
+                             "; se muestran los que coinciden en otros niveles o municipios. "))
+        if pq and modalidad:
+            attempts.append(({"modalidad": modalidad},
+                             f"No encontramos un programa con las palabras «{pq}». Estos son los programas de nivel {lvl} de la institución. "))
+        if pq or modalidad or mun:
+            attempts.append(({}, (f"No encontramos un programa con las palabras «{pq}». " if pq else
+                                  f"No hay programas de nivel {lvl}. ") + "Estos son todos los programas de la institución. "))
+        cands, note = [], ""
+        for extra, note in attempts:
+            cands = cat.search_programs(**base, **extra, limit=50)
+            if cands:
+                break
     except ConnectorDisabled as e:
         return {"program_status": "pending", "candidates": [], "message": str(e)}
     except ConnectorError as e:
         return {"program_status": "error", "candidates": [], "message": f"No fue posible consultar la fuente ({e}). El borrador se conserva sin verificación."}
-    msg = ("Seleccione su programa y verifíquelo." if cands else
-           "Sin coincidencias. Pruebe con menos palabras del nombre del programa o sin filtrar por nivel.")
+    msg = (note + "Seleccione su programa y verifíquelo.") if cands else         "No se encontraron programas para esa institución en la fuente oficial. Revise el nombre, el código o el NIT de la institución."
     return {"program_status": "pending", "candidates": [c.to_dict() for c in cands], "message": msg}
+
+
+MODALIDAD_TXT = {"TC": "técnica profesional", "TL": "tecnológica", "TE": "especialización tecnológica", "UN": "universitaria",
+                 "ES": "especialización", "MG": "maestría", "DOC": "doctorado"}
 
 
 def _set_program(user_id, record_id, upd: dict) -> None:

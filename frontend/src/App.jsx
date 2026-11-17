@@ -118,8 +118,9 @@ function Workspace({ user, onLogout }) {
   return (
     <>
       <header className="app-bar">
-        <div className="app-bar-inner">
-          <a className="brand" href="#/personal" aria-label="Hoja de Vida Digital, inicio"><BrandMark /><span>Hoja de Vida <b>Digital</b></span></a>
+        <div className="app-bar-top"><div className="app-bar-inner">
+          <a className="brand" href="#/personal" aria-label="Hoja de Vida Digital, inicio"><BrandMark />
+            <span className="brand-text"><span>Hoja de Vida <b>Digital</b></span><small>Formato Único · Persona natural</small></span></a>
           <div className="user">
             <span className="avatar" aria-hidden="true">{initials(user, resume)}</span>
             <span className="email" title={user.email}>{user.email}</span>
@@ -127,7 +128,7 @@ function Workspace({ user, onLogout }) {
               {leaving ? <Spinner /> : <Icon name="logout" />}Salir
             </button>
           </div>
-        </div>
+        </div></div>
         <nav className="stepper" aria-label="Secciones">
           {TABS.map((t) => {
             const pr = progress[t.key] || {};

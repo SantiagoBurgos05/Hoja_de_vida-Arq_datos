@@ -37,6 +37,9 @@ Tras verificar la institución (SNIES o SIET) se puede verificar el **programa**
 | SIET | `2v94-3ypi` «Programas ETDH» (MinEducación) | `codigo_programa` (único) | Corte 11/2020, como las instituciones SIET |
 
 - **Probado en vivo** (2026-11-16, `scripts/check_sources.py`): «sena» + «analisis desarrollo software» (TL) → «TECNÓLOGO EN ANÁLISIS Y DESARROLLO DE SISTEMAS DE SOFTWARE», verificado; «politecnico» + «sistemas» en SIET, verificado.
+- **NIT**: el catálogo de programas no tiene NIT; si la institución se indica por NIT (9 o más dígitos), primero se resuelve en el dataset de instituciones a los códigos de todas sus sedes y se buscan los programas de esos códigos.
+- **Palabras recortadas a su raíz** (6 caracteres): «tecnología» encuentra «TECNÓLOGO», «licenciatura» encuentra «LICENCIADO».
+- **Sin coincidencias, se relajan los filtros** (siempre dentro de la institución) y el mensaje dice cuál: (1) sin nivel ni municipio, conservando las palabras; (2) los programas del nivel de la modalidad; (3) todos los programas de la institución. Así una modalidad mal declarada (p. ej. «UN» para un tecnólogo del SENA) no deja la lista vacía.
 - La verificación es por la clave exacta en el backend; la búsqueda solo lista candidatos. La evidencia (respuesta cruda + SHA-256) se guarda en Bronze como `program_evidence`.
 - Un fallo de la fuente no revoca un programa ya verificado. Cambiar la modalidad o verificar otra institución lo devuelve a `pending`.
 - **Límite de confianza**: un programa verificado prueba que el programa existe (o existió) en la institución, **no** que la persona lo haya cursado. La clave compuesta de SNIES es más débil que un código oficial de programa.

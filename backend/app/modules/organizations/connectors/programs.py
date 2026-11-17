@@ -43,9 +43,11 @@ STOP = {"DE", "DEL", "LA", "LAS", "EL", "LOS", "EN", "Y", "E", "O", "U", "A", "A
 
 def word_patterns(q: str) -> list[str]:
     """Cada palabra significativa como patrón LIKE independiente (cualquier orden): «análisis desarrollo software»
-    encuentra «TECNÓLOGO EN ANÁLISIS Y DESARROLLO DE SISTEMAS DE SOFTWARE». Se ignoran conectores y palabras de 1-2 letras."""
+    encuentra «TECNÓLOGO EN ANÁLISIS Y DESARROLLO DE SISTEMAS DE SOFTWARE». Se ignoran conectores y palabras de 1-2 letras.
+    Cada palabra se recorta a su raíz (6 caracteres) para tolerar variaciones del título: «tecnología» encuentra
+    «TECNÓLOGO», «licenciatura» encuentra «LICENCIADO» y «administración» encuentra «ADMINISTRADOR»."""
     words = [w for w in name_pattern(q).strip("%").split() if len(w) > 2 and w.replace("_", "A") not in STOP]
-    return [f"%{w}%" for w in dict.fromkeys(words)][:6]
+    return [f"%{w[:6]}%" for w in dict.fromkeys(words)][:6]
 
 
 class ProgramCatalog(SocrataConnector):
@@ -90,13 +92,17 @@ class ProgramCatalog(SocrataConnector):
 
     # ---------------------------------------------------------------- API
     def search_programs(self, institution_id: str | None = None, institution_query: str | None = None, municipio: str | None = None,
-                        program_query: str | None = None, modalidad: str | None = None, limit: int = 30) -> list[ProgramCandidate]:
+                        program_query: str | None = None, modalidad: str | None = None, limit: int = 30,
+                        institution_ids: list[str] | None = None) -> list[ProgramCandidate]:
         c, where = self.cols, []
         iid = (institution_id or "").strip()
+        ids = [x.strip() for x in (institution_ids or []) if x and x.strip().isdigit()][:20]
         if iid:
             if not iid.isdigit():
                 return []
             where.append(f"{c['inst']}='{_esc(iid)}'")
+        elif ids:                                       # p. ej. las sedes que comparten un NIT
+            where.append(f"{c['inst']} in (" + ", ".join(f"'{_esc(x)}'" for x in ids) + ")")
         elif institution_query and institution_query.strip():
             where.append(f"upper({c['inst_name']}) like '{_esc(name_pattern(institution_query))}'")
         else:

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { api } from "../lib/api.js";
 import { Badge, Banner, Icon, Spinner } from "./ui.jsx";
 import { MODALIDADES, orgLabel, programLabel } from "../lib/format.js";
@@ -10,7 +10,7 @@ export const SOURCES = {
   work_privada: [["rues", "RUES (empresa privada)"]],
   work_publica: [["sigep", "SIGEP (entidad pública)"]],
 };
-const STATUS_KIND = { verified: "ok", pending: "neutral", not_found: "warn", error: "bad" };
+const STATUS_KIND = { verified: "ok", pending: "warn", not_found: "bad", error: "bad" };
 const HINT = {
   due: "Busque el colegio por nombre y municipio, o por código DANE.",
   snies: "Busque la institución por nombre y municipio, o por código SNIES o NIT. Si escribe también el programa, verá directamente los programas que coinciden.",
@@ -41,8 +41,9 @@ function ProgramList({ items, busyId, disabled, onVerify, label }) {
 }
 
 // Paso 2 (estudios superiores): el programa dentro de la institución ya verificada.
-function ProgramPanel({ source, institutionId, recordId, study, onChanged }) {
-  const [q, setQ] = useState(study.name || "");
+function ProgramPanel({ source, institutionId, recordId, study, onChanged, autoSearch }) {
+  const [typed, setQ] = useState(null);                 // null = sin editar: sigue al nombre de los estudios declarado
+  const q = typed ?? (study.name || "");
   const [levelOnly, setLevelOnly] = useState(true);
   const [res, setRes] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -50,6 +51,9 @@ function ProgramPanel({ source, institutionId, recordId, study, onChanged }) {
   const [msg, setMsg] = useState("");
   const st = study.programStatus || "pending";
   const p = study.program;
+  const [open, setOpen] = useState(st !== "verified");
+  // Recién verificada la institución: se buscan de inmediato los programas que coinciden con el estudio declarado.
+  useEffect(() => { if (autoSearch && st !== "verified") search(); }, [autoSearch]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function search(e) {
     e?.preventDefault();
@@ -83,10 +87,10 @@ function ProgramPanel({ source, institutionId, recordId, study, onChanged }) {
           </div>
         </div>
       )}
-      <details className="finder" onToggle={(e) => { if (e.currentTarget.open && !q) setQ(study.name || ""); }}>
+      <details className="finder" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
         <summary><Icon name="search" />{st === "verified" ? "Cambiar programa" : "Buscar programa en esta institución"}</summary>
         <form className="finder-body" onSubmit={search}>
-          <p className="muted small">Escriba palabras del programa (por ejemplo «análisis desarrollo software»). Déjelo vacío para ver todos los programas de la institución.</p>
+          <p className="muted small">Se precarga con el nombre de los estudios que declaró. Escriba otras palabras del programa (por ejemplo «análisis desarrollo software») o déjelo vacío para ver todos los programas de la institución.</p>
           <label className="field"><span>Programa</span>
             <input value={q} placeholder="Ej.: ingeniería de sistemas" onChange={(e) => setQ(e.target.value)} />
           </label>
@@ -112,7 +116,10 @@ function ProgramPanel({ source, institutionId, recordId, study, onChanged }) {
 
 export default function EntityVerifier({ recordType, recordId, sources, status, organization, onChanged, study }) {
   const [source, setSource] = useState(sources[0]?.[0]);
-  const [q, setQ] = useState({ query: "", municipio: "", official_id: "", program: "" });
+  const [qs, setQ] = useState({ query: "", municipio: "", official_id: "", program: null });
+  // Mientras la persona no edite «Programa», se precarga con el nombre de los estudios declarado (aunque cambie después).
+  const q = { ...qs, program: qs.program ?? (study?.name || "") };
+  const [justVerified, setJustVerified] = useState(false);
   const [res, setRes] = useState(null);
   const [progRes, setProgRes] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -128,7 +135,7 @@ export default function EntityVerifier({ recordType, recordId, sources, status, 
       if (withPrograms && q.program.trim()) {
         // Búsqueda combinada: institución + programa → candidatos a nivel de programa.
         const body = { source: src, program_query: q.program.trim(), modalidad: study.modalidad || null };
-        if (/^\d+$/.test(q.official_id.trim())) body.institution_id = q.official_id.trim();
+        if (q.official_id.trim()) body.institution_id = q.official_id.trim();      // código o NIT (el backend resuelve el NIT)
         else { body.institution_query = q.query.trim() || null; if (q.municipio.trim()) body.municipio = q.municipio.trim(); }
         setProgRes(await api.post("/api/organizations/programs/search", body));
         return;
@@ -143,7 +150,9 @@ export default function EntityVerifier({ recordType, recordId, sources, status, 
     setBusy(true); setVerifying(official_id); setMsg("");
     try {
       const r = await api.post("/api/organizations/verify", { source: src, official_id, record_type: recordType, record_id: recordId });
-      setMsg(r.message); setRes(null); onChanged?.(r);
+      setMsg(r.message); setRes(null);
+      if (r.organization_status === "verified") setJustVerified(true);
+      onChanged?.(r);
     } catch (e) { setMsg(e.message); } finally { setBusy(false); setVerifying(null); }
   }
   async function verifyProgram(c) {
@@ -190,13 +199,14 @@ export default function EntityVerifier({ recordType, recordId, sources, status, 
           )}
           <p className="muted small">{HINT[src]}</p>
           <div className="grid">
-            <label className="field"><span>Nombre</span><input value={q.query} placeholder="Ej.: minuto de dios" onChange={(e) => setQ({ ...q, query: e.target.value })} /></label>
-            <label className="field"><span>Municipio</span><input value={q.municipio} placeholder="Opcional" onChange={(e) => setQ({ ...q, municipio: e.target.value })} /></label>
+            <label className="field"><span>Nombre</span><input value={q.query} placeholder="Ej.: minuto de dios" onChange={(e) => setQ({ ...qs, query: e.target.value })} /></label>
+            <label className="field"><span>Municipio</span><input value={q.municipio} placeholder="Opcional" onChange={(e) => setQ({ ...qs, municipio: e.target.value })} /></label>
           </div>
           <div className="or">o</div>
-          <label className="field"><span>o identificador oficial (NIT/código)</span><input value={q.official_id} inputMode="numeric" placeholder="Ej.: 890903938" onChange={(e) => setQ({ ...q, official_id: e.target.value })} /></label>
+          <label className="field"><span>o identificador oficial (NIT/código)</span><input value={q.official_id} inputMode="numeric" placeholder="Ej.: 890903938" onChange={(e) => setQ({ ...qs, official_id: e.target.value })} /></label>
           {withPrograms && (
             <label className="field"><span>Programa (opcional)</span>
+              <small className="muted">Precargado con sus estudios: se listan los programas de la institución que coinciden. Bórrelo para buscar solo la institución.</small>
               <input value={q.program} placeholder="Ej.: análisis y desarrollo de software" onChange={(e) => setQ({ ...q, program: e.target.value })} />
               {study.name && !q.program && (
                 <button type="button" className="ghost sm chip-btn" onClick={() => setQ({ ...q, program: study.name })}>
@@ -243,7 +253,8 @@ export default function EntityVerifier({ recordType, recordId, sources, status, 
       {study && PROGRAM_SOURCES.has(organization?.source) && status === "verified" && (
         <div className="program-step">
           <div className="panel-head"><Icon name="cap" /><h4>Programa académico</h4></div>
-          <ProgramPanel source={organization.source} institutionId={organization.official_id} recordId={recordId} study={study} onChanged={onChanged} />
+          <ProgramPanel key={organization.official_id} source={organization.source} institutionId={organization.official_id} recordId={recordId}
+            study={study} onChanged={onChanged} autoSearch={justVerified} />
         </div>
       )}
       {study && status !== "verified" && (
